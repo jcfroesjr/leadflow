@@ -1,0 +1,177 @@
+{
+  "form": {
+    "form_id": "NWQ9dDqT",
+    "form_name": "Sessão Estratégica"
+  },
+  "respondent": {
+    "date": "2026-03-21 12:45:03",
+    "score": 97000,
+    "status": "completed",
+    "answers": {
+      "Você ja vende?": "Sim, Loja fisica.",
+      "Você tem funcionário?": "sim tenho 1",
+      "Você tem estoque parado hoje?": "10 a 30mil",
+      "Qual o @ do Instagram da sua Loja?": "@missleal",
+      "Hoje o que você mais valoriza na sua vida?": "Minha família",
+      "Vamos começar, Qual o seu nome? (e sobrenome)": "Rejane de Caca",
+      "Qual tem sido a sua média de faturamento MENSAL?": "De 10 a 30mil",
+      "Hoje, qual é a sua MAIOR dificuldade no negócio?": "Financeiro, marketing, falta de estratégia",
+      "Hoje você sente que o seu negócio te dá LUCRO de verdade?": "Mais ou menos, às vezes sobra, às vezes não",
+      "Você tem algum(a) Sócio (o) ou Investidor no seu negócio?": "Não",
+      "Na sua visão, o que mais está te impedindo de CRESCER hoje?": "Falta de dinheiro, Falta de estratégia clara",
+      "O que mais te chama atenção na Comunidade Viver de Moda neste momento?": "A metodologia prática",
+      "Qual o seu número WhatsApp? (Fique de olho, é pelo WhatsApp que entraremos em contato)": "55 21982822554",
+      "Essa é a pergunta mais importante do formulário:\nQual dessas opções MAIS representa o momento atual do seu negócio hoje?": "Já vendo, mas meu faturamento é instável, sinto que trabalho muito e não tenho previsibilidade nem lucro claro",
+      "Nosso objetivo é formar novas alunas que possam faturar 100 mil, 500 mil ou até 1 milhão por ano com moda. Se isso acontecer com você, podemos usar sua história como estudo de caso?": "Sim, Com certeza",
+      "Caso faça sentido para o seu momento, você estaria aberta a investir pra ter um acompanhamento estratégico com a Rejane, para acelerar seus resultados e evitar erros que custam tempo e dinheiro?": "Talvez, preciso entender melhor",
+      "AVISO....Poucas pessoas são selecionadas para este projeto, não pelo fator financeiro, mas por não acreditarmos que ela irá gerar grandes frutos para si mesma e para a nossa empresa. A maioria das pessoas não estão comprometidas ou acham que ficarão ricas sem trabalhar ou fazer a parte delas... Seja sincero(a). Você está comprometido(a) neste momento ou acredita que ainda NÃO chegou a sua hora?": "Estou muito comprometida e pronta para agir"
+    },
+    "raw_answers": [
+      {
+        "answer": "Rejane de Caca",
+        "question": {
+          "question_id": "95960d2dab16",
+          "question_type": "text",
+          "question_title": "Vamos começar, Qual o seu nome? (e sobrenome)"
+        }
+      },
+      {
+        "answer": {
+          "phone": "21982822554",
+          "country": "55"
+        },
+        "question": {
+          "question_id": "x74by5tm441i",
+          "question_type": "phone",
+          "question_title": "Qual o seu número WhatsApp? (Fique de olho, é pelo WhatsApp que entraremos em contato)"
+        }
+      },
+      {
+        "answer": "@missleal",
+        "question": {
+          "question_id": "xyijxz7mlq1",
+          "question_type": "text",
+          "question_title": "Qual o @ do Instagram da sua Loja?"
+        }
+      },
+      {
+        "answer": ["Já vendo, mas meu faturamento é instável, sinto que trabalho muito e não tenho previsibilidade nem lucro claro"],
+        "question": {
+          "question_id": "xy8zow4014hp",
+          "question_type": "radio",
+          "question_title": "Essa é a pergunta mais importante do formulário:\nQual dessas opções MAIS representa o momento atual do seu negócio hoje?"
+        }
+      },
+      {
+        "answer": ["Sim, Loja fisica."],
+        "question": {
+          "question_id": "xza8x61ep509",
+          "question_type": "radio",
+          "question_title": "Você ja vende?"
+        }
+      },
+      {
+        "answer": ["10 a 30mil"],
+        "question": {
+          "question_id": "xubbfj8hck6q",
+          "question_type": "radio",
+          "question_title": "Você tem estoque parado hoje?"
+        }
+      },
+      {
+        "answer": ["sim tenho 1"],
+        "question": {
+          "question_id": "xy2ddxs25rd",
+          "question_type": "radio",
+          "question_title": "Você tem funcionário?"
+        }
+      },
+      {
+        "answer": ["De 10 a 30mil"],
+        "question": {
+          "question_id": "x941owg9q75n",
+          "question_type": "radio",
+          "question_title": "Qual tem sido a sua média de faturamento MENSAL?"
+        }
+      },
+      {
+        "answer": ["Mais ou menos, às vezes sobra, às vezes não"],
+        "question": {
+          "question_id": "x2rpi2xo0tv3",
+          "question_type": "radio",
+          "question_title": "Hoje você sente que o seu negócio te dá LUCRO de verdade?"
+        }
+      },
+      {
+        "answer": "Financeiro, marketing, falta de estratégia",
+        "question": {
+          "question_id": "xhazbcwclkht",
+          "question_type": "text",
+          "question_title": "Hoje, qual é a sua MAIOR dificuldade no negócio?"
+        }
+      },
+      {
+        "answer": ["Falta de dinheiro", "Falta de estratégia clara"],
+        "question": {
+          "question_id": "x7vis8jsakqd",
+          "question_type": "radio",
+          "question_title": "Na sua visão, o que mais está te impedindo de CRESCER hoje?"
+        }
+      },
+      {
+        "answer": ["Sim, Com certeza"],
+        "question": {
+          "question_id": "xfmbmffkjf6i",
+          "question_type": "radio",
+          "question_title": "Nosso objetivo é formar novas alunas que possam faturar 100 mil, 500 mil ou até 1 milhão por ano com moda. Se isso acontecer com você, podemos usar sua história como estudo de caso?"
+        }
+      },
+      {
+        "answer": ["A metodologia prática"],
+        "question": {
+          "question_id": "xea67twpbswl",
+          "question_type": "radio",
+          "question_title": "O que mais te chama atenção na Comunidade Viver de Moda neste momento?"
+        }
+      },
+      {
+        "answer": ["Estou muito comprometida e pronta para agir"],
+        "question": {
+          "question_id": "xmkkpwkeixpr",
+          "question_type": "radio",
+          "question_title": "AVISO....Poucas pessoas são selecionadas para este projeto, não pelo fator financeiro, mas por não acreditarmos que ela irá gerar grandes frutos para si mesma e para a nossa empresa. A maioria das pessoas não estão comprometidas ou acham que ficarão ricas sem trabalhar ou fazer a parte delas... Seja sincero(a). Você está comprometido(a) neste momento ou acredita que ainda NÃO chegou a sua hora?"
+        }
+      },
+      {
+        "answer": "Não",
+        "question": {
+          "question_id": "x8ciffx8s4sx",
+          "question_type": "text",
+          "question_title": "Você tem algum(a) Sócio (o) ou Investidor no seu negócio?"
+        }
+      },
+      {
+        "answer": ["Talvez, preciso entender melhor"],
+        "question": {
+          "question_id": "xjjrrfurtz38",
+          "question_type": "radio",
+          "question_title": "Caso faça sentido para o seu momento, você estaria aberta a investir pra ter um acompanhamento estratégico com a Rejane, para acelerar seus resultados e evitar erros que custam tempo e dinheiro?"
+        }
+      },
+      {
+        "answer": "Minha família",
+        "question": {
+          "question_id": "xra4h73nk9pd",
+          "question_type": "text",
+          "question_title": "Hoje o que você mais valoriza na sua vida?"
+        }
+      }
+    ],
+    "respondent_id": "teste-rejane-21982822554",
+    "respondent_utms": {
+      "utm_source": "ig",
+      "utm_medium": "Cadastros | Conversão | ABO 3 Lista",
+      "utm_campaign": "D4_Lista_Lojistas + Comerciantes + Segmentação Vídeos 20.1"
+    }
+  }
+}

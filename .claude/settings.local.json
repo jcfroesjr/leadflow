@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://leadflow-backend.bqvcbz.easypanel.host/health\" -w \"\\\\nHTTP Status: %{http_code}\" --max-time 10)",
+      "Bash(curl -s -X POST \"https://leadflow-backend.bqvcbz.easypanel.host/teste/whatsapp\" -H \"Content-Type: application/json\" -d \"{\"\"numero\"\":\"\"5521982822554\"\",\"\"mensagem\"\":\"\"Teste\"\",\"\"instancia\"\":\"\"Avalanche\"\",\"\"evo_url\"\":\"\"https://avalanche-evolution-api.bqvcbz.easypanel.host\"\",\"\"evo_key\"\":\"\"A0491A4DE293-4880-AD08-1AB52DD27100\"\"}\" -w \"\\\\nHTTP Status: %{http_code}\" --max-time 15)",
+      "Bash(curl -s -X POST \"https://leadflow-backend.bqvcbz.easypanel.host/webhook/6213bf16-fad3-47ff-84b7-d18e6ac03154/0775fa026d544eb0b2dbf263e1e4687a\" -H \"Content-Type: application/json\" -d \"{\"\"nome\"\":\"\"Joao Teste\"\",\"\"telefone\"\":\"\"5521982822554\"\",\"\"email\"\":\"\"joao@teste.com\"\",\"\"empresa\"\":\"\"Empresa Teste\"\",\"\"interesse\"\":\"\"Produto X\"\"}\" -w \"\\\\nHTTP Status: %{http_code}\" --max-time 20)",
+      "Bash(curl -s \"https://pllpwjuagqykxwyfpqrz.supabase.co/rest/v1/webhooks?select=nome,mapeamento_campos&order=criado_em.desc&limit=5\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbHB3anVhZ3F5a3h3eWZwcXJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzg2MTQ2NSwiZXhwIjoyMDg5NDM3NDY1fQ.onrXkCUtn_rUxSarIPE0P3o2qLEuR2k55KWtY2q0xoY\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbHB3anVhZ3F5a3h3eWZwcXJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzg2MTQ2NSwiZXhwIjoyMDg5NDM3NDY1fQ.onrXkCUtn_rUxSarIPE0P3o2qLEuR2k55KWtY2q0xoY\")",
+      "Bash(curl -s \"https://pllpwjuagqykxwyfpqrz.supabase.co/rest/v1/leads?empresa_id=eq.6213bf16-fad3-47ff-84b7-d18e6ac03154&select=nome,telefone,score,status&order=criado_em.desc&limit=10\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbHB3anVhZ3F5a3h3eWZwcXJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzg2MTQ2NSwiZXhwIjoyMDg5NDM3NDY1fQ.onrXkCUtn_rUxSarIPE0P3o2qLEuR2k55KWtY2q0xoY\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbHB3anVhZ3F5a3h3eWZwcXJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzg2MTQ2NSwiZXhwIjoyMDg5NDM3NDY1fQ.onrXkCUtn_rUxSarIPE0P3o2qLEuR2k55KWtY2q0xoY\")",
+      "Bash(python -c \"import json,sys; print\\(json.dumps\\(json.load\\(sys.stdin\\), indent=2\\)\\)\")",
+      "Bash(python -c \"import app.routers.agente; print\\(''OK''\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://leadflow-backend.bqvcbz.easypanel.host/agente/testar\" -X POST -H \"Content-Type: application/json\" -d '{\"\"empresa_id\"\": \"\"6213bf16-fad3-47ff-84b7-d18e6ac03154\"\", \"\"lead\"\": {\"\"nome\"\": \"\"Teste\"\"}}')",
+      "Bash(curl -s -X POST \"https://leadflow-backend.bqvcbz.easypanel.host/agente/testar\" -H \"Content-Type: application/json\" -d '{\"\"empresa_id\"\": \"\"6213bf16-fad3-47ff-84b7-d18e6ac03154\"\", \"\"lead\"\": {\"\"nome\"\": \"\"Teste\"\"}}')",
+      "Bash(curl -s https://avalanche-evolution-api.bqvcbz.easypanel.host/webhook/find/Avalanche -H 'apikey: avalanche')",
+      "Bash(curl -s \"https://avalanche-evolution-api.bqvcbz.easypanel.host/webhook/find/Avalanche\" -H \"apikey: avalanche2025\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s \"https://avalanche-evolution-api.bqvcbz.easypanel.host/webhook/find/Avalanche\" -H \"Authorization: Bearer avalanche2025\")",
+      "Bash(__NEW_LINE_d5a16dd801254e94__ curl:*)",
+      "Bash(curl -s -X POST \"https://leadflow-backend.bqvcbz.easypanel.host/agente/evolution/webhook\" -H \"Content-Type: application/json\" -d '{:*)",
+      "Bash(curl -s \"https://leadflow-backend.bqvcbz.easypanel.host/health\")",
+      "Bash(curl -s -X POST \"https://leadflow-backend.bqvcbz.easypanel.host/agente/testar\" -H \"Content-Type: application/json\" -d '{\"\"empresa_id\"\": \"\"6213bf16-fad3-47ff-84b7-d18e6ac03154\"\", \"\"lead\"\": {\"\"nome\"\": \"\"Teste\"\", \"\"interesse\"\": \"\"mentoria\"\"}}')",
+      "Bash(python3 -c \"import datetime; print\\(datetime.datetime.fromtimestamp\\(1774119320\\)\\)\")",
+      "Bash(node -e \"console.log\\(new Date\\(1774119320 * 1000\\).toISOString\\(\\)\\)\")",
+      "Bash(curl -s \"https://leadflow-backend.bqvcbz.easypanel.host/agenda/google/calendarios?empresa_id=6213bf16-fad3-47ff-84b7-d18e6ac03154\")",
+      "Read(//c/Users/Caca Froes/.claude/projects/c--Projetos-Leadflow/memory/**)",
+      "Bash(curl -s \"https://pllpwjuagqykxwyfpqrz.supabase.co/rest/v1/empresas?select=id,nome\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbHB3anVhZ3F5a3h3eWZwcXJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzg2MTQ2NSwiZXhwIjoyMDg5NDM3NDY1fQ.onrXkCUtn_rUxSarIPE0P3o2qLEuR2k55KWtY2q0xoY\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbHB3anVhZ3F5a3h3eWZwcXJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzg2MTQ2NSwiZXhwIjoyMDg5NDM3NDY1fQ.onrXkCUtn_rUxSarIPE0P3o2qLEuR2k55KWtY2q0xoY\")",
+      "Bash(python -c \":*)"
+    ]
+  }
+}
