@@ -25,9 +25,10 @@
 |---|---|---|
 | `leadflow-frontend/src/components/WhatsAppConnect.tsx` | Criar | Componente QR code compartilhado (modo criar / gerenciar) |
 | `leadflow-frontend/src/modules/onboarding/OnboardingPage.tsx` | Criar | Stepper 3 etapas pós-criação de empresa |
-| `leadflow-frontend/src/modules/settings/SettingsPage.tsx` | Modificar | Adicionar aba "WhatsApp" com `<WhatsAppConnect mode="gerenciar">` |
+| `leadflow-frontend/src/modules/settings/SettingsPage.tsx` | Modificar | Adicionar aba "WhatsApp" com `<WhatsAppConnect mode="gerenciar">` (**nota:** a spec chama este arquivo de `ConfiguracoesPage.tsx`, mas o arquivo real verificado no repositório é `src/modules/settings/SettingsPage.tsx`) |
 | `leadflow-frontend/src/modules/empresas/EmpresasPage.tsx` | Modificar | Redirecionar para `/onboarding` após criar empresa |
 | `leadflow-frontend/src/app/router.tsx` | Modificar | Registrar rota `/onboarding` |
+| `leadflow-frontend/src/components/ApiKeysForm.tsx` | **Não criar** — desvio intencional | A spec pede extração do form de API keys; o plano usa form inline simplificado em Etapa2 (YAGNI — ver Notas) |
 
 ---
 
