@@ -1,0 +1,68 @@
+# Claude Code config (contém credenciais — NÃO commitar)
+.claude/
+!.claude/CLAUDE.md
+!.claude/skills/
+!.claude/agents/
+
+# Env files (segredos)
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Backups e tmp
+.backups/
+.tmp_*
+*.tmp_*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+
+# Build artifacts
+.next/
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+log-pre-deploy-*.txt
+
+# Graphify cache
+graphify-out/cache/
+graphify/
+
+# Sessões locais
+.tmp_candidatos.json
+.tmp_cfg.json
+.tmp_fus.json
+.tmp_patch.json
+.tmp_patch2.json
+.tmp_processar.json
+.tmp_qr.json
+.tmp_config.json
+__pycache__/
+app.py
+bia-qr.html
+leads_responde.csv
+leads_responde2.csv
+requirements.txt
