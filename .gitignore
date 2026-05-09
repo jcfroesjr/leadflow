@@ -47,8 +47,8 @@ Thumbs.db
 *.log
 log-pre-deploy-*.txt
 
-# Graphify cache
-graphify-out/cache/
+# Graphify (regenerável, 17MB com graph.html/json — pesa o VS Code)
+graphify-out/
 graphify/
 
 # Sessões locais
