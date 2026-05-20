@@ -174,33 +174,246 @@ Phases 1-6 do frontend v2 (Auth, Dashboard, Leads, Conversas, Agente IA, Pipelin
 
 ---
 
-## Phase Order Rationale
+## Phase Order Rationale (v2.0)
 
 1. **Phase 1 primeiro (CRITICAL PATH)** — sem lock, todo o resto continua quebrado
 2. **Phase 2 depois** — dedup universal só faz sentido com lock garantindo ordenação
-3. **Phase 3** — slot-pick deterministic depende de OFERTA_ATIVA criado em Phase 2
-4. **Phase 4** — idempotência semântica é defesa adicional, mais robusta com lock
-5. **Phase 5** — testes validam tudo acima e protegem contra regressão
-6. **Phase 6** — documentação e observabilidade pra operação contínua
+3. **Phase 3-6 (v2.0)** — slot-pick + audio + testes + docs
+
+---
+
+## v2.0 Status (validated em prod)
+
+| Phase | Status | Notas |
+|-------|--------|-------|
+| Phase 1: Lock Atômico + Queue | ✓ shippado ad-hoc 06/05 | Validated em prod, sem ciclo GSD |
+| Phase 2: Dedup Universal + OFERTA_ATIVA | ✓ shippado ad-hoc 06/05 | Validated em prod |
+| Phase 3: Slot-Pick Determinístico | ✓ shippado ad-hoc 06/05 | Build `2026-05-03-slot-pick-direto-numeros-vs-tokens` em prod |
+| Phase 4: Audio Tolerance | ⏸ diferido | Sem reportes desde 06/05, próximo milestone se ressurgir |
+| Phase 5: Testes Regressão T1-T8 | ⏸ diferido | Validação ad-hoc em prod via casos reais |
+| Phase 6: Doc + Observabilidade | ⏸ parcial | Memórias atualizadas, endpoint queue-stats não criado |
+
+---
+
+## Milestone v2.1 — Grupo WhatsApp Robusto
+
+**Goal:** Eliminar bugs `@lid` no grupo WhatsApp capturando Linked ID em múltiplas fontes (`GROUP_PARTICIPANTS_UPDATE` + `MESSAGES_UPSERT` + backfill admin) e usando como matcher alternativo ao telefone em todos os probes Evolution.
+
+**Critical path:** Phase 3 (fix base `@lid`) — já implementada no workdir, falta commit + validação. Sem ela, fases 4-9 ficam sem fundação.
+
+**Não reverter:** 10 commits 03/05 (sync_loop + slots fillup), 4 patches Fase 1 grupo 18/05 (removeu presunção @lid), Fase 4 18/05 (probe + FSM unificado), fixes 19/05 (FSM=ATIVO bypass + convite nominal).
+
+---
+
+### Phase 3: Fix `@lid` Base (workdir 20/05)
+**Goal:** Webhook `GROUP_PARTICIPANTS_UPDATE` captura `@lid` quando lead entra com privacidade alta. Probe Evolution aceita `lead_lid` como matcher alternativo. 7 callers threadeados.
+
+**Requirements:** LID-01, LID-02, LID-03, LID-04, LID-05, LID-06, LID-07, LID-08
+
+**Deliverables (implementados no workdir):**
+- `app/services/evolution.py:198-302` — `verificar_lead_no_grupo` aceita `lead_lid: str = ""` e casa por @lid no loop de participants
+- `app/routers/grupo_webhook.py` — separa `@lid` de telefones; heurística unique-aguardando salva marker `LEAD_LID:{grupo_jid}:{lid}`
+- `app/services/grupo_fallback.py` — helper `_get_lead_lid_for_group` + 6 callers threadeados
+- `app/routers/confirmacao_agendamento.py:289` — caller threadeado
+
+**Faltam (esta fase fecha):**
+- Validação sintaxe + import — ✓ feito
+- Commit + push backend
+- Redeploy Easypanel
+- Smoke test em produção (1 lead novo)
+- Atualizar memória com novo padrão
+
+**Success criteria:**
+1. Lead novo entra no grupo com @lid → webhook salva marker `LEAD_LID` → probe casa por lid → FSM=ATIVO
+2. Lead que entra com telefone limpo continua funcionando como antes
+3. Probe legacy (callers sem `lead_lid`) continua funcionando (backwards compat)
+4. Build em prod sem erros nos logs `[VERIFY-LEAD]` e `[LEAD-LID]`
+
+**Plans:** ~1 plan
+- 03-01-PLAN.md — Validação + commit + redeploy + smoke test
+
+**Status:** ⚡ Workdir pronto, aguardando aprovação pra commit
+
+---
+
+### Phase 4: Captura `@lid` via `MESSAGES_UPSERT` (defesa-em-profundidade)
+**Goal:** Quando webhook do agente recebe msg de lead no grupo com `key.participant` formato `@lid`, captura o lid e promove FSM se exatamente 1 lead aguardando. Cobre casos onde `GROUP_PARTICIPANTS_UPDATE` não dispara.
+
+**Requirements:** LID-D-01, LID-D-02, LID-D-03, LID-D-04, LID-D-05
+
+**Deliverables:**
+- Bloco novo em `_processar_webhook_evolution_inner` (`app/routers/agente.py`): detecta `key.remoteJid` terminando em `@g.us`, extrai `key.participant`
+- Reuso de `_salvar_lead_lid` + `processar_entrada_lead_no_grupo` (já existentes)
+- Não interfere no processamento normal (continua salvando msg do lead, etc)
+- Logs `[LID-CAPTURE-MSG]` estruturados
+
+**Success criteria:**
+1. Lead manda msg no grupo sem ter sido capturado pelo webhook ParticipantsUpdate → MESSAGES_UPSERT captura @lid e promove FSM=ATIVO
+2. Lead já ATIVO no grupo manda msg → captura idempotente, não duplica marker
+3. 2 leads aguardando + msg de @lid desconhecido → ambíguo, loga, não promove
+4. Lead 1-1 normal (não grupo) → fluxo intacto
+
+**Plans:** ~1 plan
+- 04-01-PLAN.md — Detector grupo no webhook + reuso de helpers
+
+**Status:** 📋 Aguardando início
+
+---
+
+### Phase 5: Endpoints Admin (backfill + observabilidade base)
+**Goal:** Endpoint pra forçar revalidação FSM (caso Karla 20/05) + endpoint pra listar status de todos leads em grupo (substitui SQL manual).
+
+**Requirements:** ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04
+
+**Deliverables:**
+- `app/routers/admin_grupo.py` (novo) — 2 endpoints com auth via `X-Admin-Key` (service role key)
+- `POST /admin/grupo/forcar-revalidacao { empresa_id, telefone, agendamento_id }` — probe live + sincroniza FSM via `processar_entrada_lead_no_grupo` se in_group=True
+- `POST /admin/grupo/forcar-revalidacao { ..., override_estado: "ATIVO" }` — força FSM mesmo se probe falhar (operador adicionou manualmente)
+- `GET /admin/grupo/status?empresa_id=X[&state=FALLBACK_1_1]` — JSON com leads+FSM+probe_live+has_lead_lid+tempo_aguardando
+- Logs `[ADMIN-GRUPO]` estruturados
+
+**Success criteria:**
+1. Operador roda `curl POST /admin/grupo/forcar-revalidacao` e Karla muda de FALLBACK_1_1 → ATIVO sem SQL manual
+2. `GET /admin/grupo/status?state=FALLBACK_1_1` retorna lista todos leads atualmente sem grupo confirmado
+3. Sem auth → 401
+4. Endpoints idempotentes (chamadas repetidas não criam dados duplicados)
+
+**Plans:** ~1 plan
+- 05-01-PLAN.md — Router admin + auth + 2 endpoints
+
+**Status:** 📋 Aguardando início
+
+---
+
+### Phase 6: Whitelist ANTI_SPAM_LOOP pra Convite Nativo (caso Patrícia)
+**Goal:** `enviar_convite_grupo` não é bloqueado por `ANTI_SPAM_LOOP:rate_alto` da conversa do lead. Fluxo crítico de entrada não pode ser confundido com spam.
+
+**Requirements:** SPAM-01, SPAM-02, SPAM-03, SPAM-04
+
+**Deliverables:**
+- Audit detalhado de `agente.py:4170-4268` (onde rate_alto é detectado e o que ele bloqueia)
+- Validação via logs Easypanel: convite nativo Patrícia 20/05 16:27:25 chegou ou foi bloqueado?
+- Whitelist: `enviar_convite_grupo` e `enviar_mensagem` chamados pelo fluxo de grupo (grupo_fallback) bypassam check de anti-spam
+- Logs `[ANTI-SPAM-BYPASS]` quando bypass acontece
+- Documentar em memória novo whitelist
+
+**Success criteria:**
+1. Lead com `ANTI_SPAM_LOOP:rate_alto` recente recebe convite nativo (card) mesmo assim
+2. Lead com `ANTI_SPAM_LOOP:rate_alto` recente NÃO recebe resposta normal do agente (mantém suppress)
+3. Logs mostram bypass quando ocorre
+4. Caso Patrícia regressão validado (probe Evolution mostra que convite chegou)
+
+**Plans:** ~1 plan
+- 06-01-PLAN.md — Audit + whitelist + logs
+
+**Status:** 📋 Aguardando início
+
+---
+
+### Phase 7: `qualificacao_lock` ANTES do Grupo (caso Patrícia Q1/Q2 dupla)
+**Goal:** `popular_qs_se_faltando` chamada ANTES de `_criar_grupo_agendamento` retornar. Fecha janela de race que permitiu Q1/Q2 dupla em Patrícia 20/05.
+
+**Requirements:** QLOCK-01, QLOCK-02, QLOCK-03, QLOCK-04
+
+**Deliverables:**
+- `app/routers/leads.py:_criar_grupo_agendamento` — call `popular_qs_se_faltando` ANTES do return
+- `app/routers/agente.py` no tool path `criar_agendamento` — mesma call ANTES de retornar resultado pra LLM
+- Persona (`nome_agente`) salva como variável imutável após qualificação selada
+- Smoke test: agendar lead novo, próxima msg do lead NÃO dispara Q1/Q2
+
+**Success criteria:**
+1. Lead novo agenda → próxima mensagem dele não trigger Q1/Q2 de novo
+2. Persona não troca mid-conversa (Maia continua Maia, Bia continua Bia)
+3. `[migracao: historico selado]` aparece SEMPRE antes da primeira msg pós-agendamento, nunca entre Q1/Q2 duplicadas
+4. Caso Patrícia regressão (recriado em teste): selador agora dispara antes
+
+**Plans:** ~1 plan
+- 07-01-PLAN.md — Mover qualificacao_lock + smoke test
+
+**Status:** 📋 Aguardando início
+
+---
+
+### Phase 8: Dashboard Frontend `/admin/grupo/status` (opcional, pode mover pra v2.2)
+**Goal:** Visualização das infos do endpoint `/admin/grupo/status` no frontend admin — tabela com cores por FSM state.
+
+**Requirements:** ADMIN-03 (frontend), ADMIN-04 (frontend auth)
+
+**Deliverables:**
+- Frontend page `/admin/grupos` em React/TypeScript
+- Tabela leads+FSM com filtro por state, tempo aguardando
+- Action "Forçar revalidação" chamando endpoint criado em Phase 5
+- Auto-refresh a cada 30s
+
+**Success criteria:**
+1. Admin abre `/admin/grupos`, vê leads em FALLBACK_1_1
+2. Clica "Forçar revalidação" → recarrega + mostra novo FSM
+3. Filtro por empresa + state funciona
+
+**Plans:** ~1 plan
+- 08-01-PLAN.md — Componente React + integração API
+
+**Status:** 📋 Opcional, pode mover pra v2.2
+
+---
+
+### Phase 9: Suite Testes Regressão T-G1..G6 + Doc
+**Goal:** Suite pytest com 6 cenários do grupo. Memória atualizada com nova arquitetura.
+
+**Requirements:** TEST-G1..G6, DOC-G1, DOC-G2, OBS-G1
+
+**Deliverables:**
+- `tests/test_grupo_robusto.py` com fixtures Evolution stub + Supabase stub
+- T-G1: lead entra phone limpo → ATIVO
+- T-G2: lead entra `@lid` + 1 aguardando → ATIVO via match
+- T-G3: lead nunca entra → FALLBACK_1_1 + convite + alerta
+- T-G4: 2 leads aguardando + ambíguo → log, não promove
+- T-G5: Patrícia regressão (Q1/Q2 não dispara 2x)
+- T-G6: Karla regressão (admin endpoint força ATIVO)
+- Memória nova `sessao_2026-05-XX_grupo_robusto.md` com arquitetura final
+- Atualizar `agente_referencia_compilada.md` com novos markers + endpoints
+
+**Success criteria:**
+1. Suite passa 100%
+2. Rodar suite < 30s
+3. Memórias bem detalhadas pra próxima sessão
+
+**Plans:** ~1 plan
+- 09-01-PLAN.md — Tests + docs + memória final
+
+**Status:** 📋 Aguardando início
+
+---
+
+## Phase Order Rationale (v2.1)
+
+1. **Phase 3 primeiro (CRITICAL — workdir pronto)** — fundação do @lid persistido
+2. **Phase 4** — segunda fonte de captura, cobre casos do webhook não disparar
+3. **Phase 5** — endpoint admin desbloqueia operação (Karla case sem SQL manual)
+4. **Phase 6** — whitelist convite nativo (resolve outro sintoma da Patrícia)
+5. **Phase 7** — qualificacao_lock ordem (resolve Q1/Q2 dupla da Patrícia)
+6. **Phase 8** (opcional) — frontend admin grupos
+7. **Phase 9** — testes + doc consolidando tudo
 
 ---
 
 ## Próximo passo imediato
 
 ```
-/gsd-discuss-phase 1
+/gsd-discuss-phase 3
 ```
 
-Vai discutir abordagens pra Phase 1 (Lock Atômico) com você antes de criar o plano detalhado.
+Discute Phase 3 antes do plano detalhado. Como ela já está em workdir, vai ser curto.
 
 Ou direto:
 
 ```
-/gsd-plan-phase 1
+/gsd-plan-phase 3
 ```
 
-Pula a discussão e vai direto pro plano executável.
+Pula a discussão e gera plano detalhado de validação + commit + smoke test.
 
 ---
 
 *Roadmap criado: 2026-05-03 — milestone v2.0*
+*Atualizado: 2026-05-20 — milestone v2.1 Grupo Robusto adicionado (Fase 3-9)*

@@ -31,88 +31,122 @@
 
 ---
 
-## Active — Milestone v2.0 Agente IA Atomic Processing
+## Validated — v2.0 Agente IA Atomic Processing (shippado ad-hoc 04-06/05)
 
-**Goal:** Eliminar race conditions, duplicações Q2/Q3 (empathy+slots), e agendamentos em horário errado quando lead manda múltiplas mensagens em sequência (texto + áudio em <10s).
+Phases 1-2 do milestone v2.0 foram entregues fora do ciclo GSD durante a sessão 06/05 (10 commits diretos + validação em prod). Marcadas validated aqui pra que requirements remanescentes (TEST, AUDIO-T, DOC, OBS) possam ser retomados em milestone futuro se necessário.
 
-### Cat 1: LOCK ATÔMICO (critical path)
+- ✓ **LOCK-01..08** — `processing_locks` + acquire/release/cleanup em prod desde 06/05
+- ✓ **DEDUP-01..04** — `send_text_uma_vez` + OFERTA_ATIVA + unique index conversas em prod
+- ✓ **SLOT-01..04** — slot-pick direto nums vs tokens (build 2026-05-03)
 
-- [ ] **LOCK-01**: Tabela `processing_locks(empresa_id, telefone, msg_id, acquired_at, expires_at)` com PK em (empresa_id, telefone)
-- [ ] **LOCK-02**: Função `acquire_lock(empresa_id, telefone, msg_id)` — INSERT atômico; retorna True ou False (já tem detentor)
-- [ ] **LOCK-03**: Função `release_lock(empresa_id, telefone, msg_id)` — DELETE; processa próximo da queue se houver
-- [ ] **LOCK-04**: Webhook `_processar_webhook_evolution_inner` adquire lock no início, libera no finally
-- [ ] **LOCK-05**: Quando lock ocupado, mensagem enfileirada via `QUEUED:{msg_id}:{ts}` em `conversas`
-- [ ] **LOCK-06**: Próximo da queue processado em ordem cronológica após release
-- [ ] **LOCK-07**: Job APScheduler (30s) limpa locks expirados (`expires_at < NOW()`)
-- [ ] **LOCK-08**: Logs estruturados `[LOCK]` em acquire/release/expire pra observabilidade
+### Diferida (próximo milestone se ressurgir)
 
-### Cat 2: DEDUP UNIVERSAL
+- AUDIO-T-01..03 (Whisper tolerance — não há mais reportes desde 06/05)
+- TEST-01..12 (suite regressão — feita ad-hoc por usuário em prod)
+- DOC-01..02 (diagrama sequência)
+- OBS-01 (endpoint /admin/queue-stats)
 
-- [ ] **DEDUP-01**: Helper `enviar_uma_vez(empresa_id, telefone, conteudo)` — antes de send_text, query DB last 30s; se mesmo conteúdo já existe → skip
-- [ ] **DEDUP-02**: Aplicar em: Q1 template, Q2 template, empathy, slot offer, "Marcadinho!", despedidas
-- [ ] **DEDUP-03**: Marker `OFERTA_ATIVA:{ts_iso}` por lead — segunda tentativa de oferecer slots em <2min retorna a oferta vigente (NÃO cria novo SLOTS_TOKENS)
-- [ ] **DEDUP-04**: Unique partial index em `conversas(empresa_id, telefone, conteudo)` WHERE role='sistema' (impede markers duplicados via race)
+---
 
-### Cat 3: SLOT-PICK DETERMINÍSTICO
+## Active — Milestone v2.1 Grupo WhatsApp Robusto
 
-- [ ] **SLOT-01**: Lookup de SLOTS_TOKENS usa SEMPRE OFERTA_ATIVA mais recente (NÃO "última msg do histórico")
-- [ ] **SLOT-02**: Matching mantém lógica atual (extrai nums 1-31, cruza day+hour vs tokens, 1 hit → usa)
-- [ ] **SLOT-03**: 0 hits ou >1 hits → BLOQUEIA tool e re-apresenta os 3 slots vigentes pedindo clarificação
-- [ ] **SLOT-04**: SLOT-OVERRIDE valida slot_token retornado pelo LLM contra OFERTA_ATIVA; corrige se diverge
+**Goal:** Eliminar bugs recorrentes de detecção `@lid` no grupo WhatsApp ao capturar Linked ID em múltiplas fontes (`GROUP_PARTICIPANTS_UPDATE` + `MESSAGES_UPSERT` + backfill admin) e persistir como marker, usado como matcher alternativo ao telefone em todos os probes Evolution.
 
-### Cat 4: AUDIO TOLERANCE
+**Causa-raiz comprovada:** WhatsApp esconde telefone do lead como `@lid` interno por privacidade. Sem mapping `phone ↔ @lid`, probe retorna chute. Cada patch anterior foi trade-off entre falso positivo e falso negativo. Esta milestone elimina o trade-off ao tornar `@lid` identidade persistida e match-able.
 
-- [ ] **AUDIO-T-01**: Whisper transcription tratada como hint, slot-pick sempre cruza nums vs tokens
-- [ ] **AUDIO-T-02**: Áudio "Sim" curto não dispara Q1/Q2 confirmation se Q1/Q2 já foi confirmado anteriormente (idempotência semântica)
-- [ ] **AUDIO-T-03**: Se Whisper retorna vazio/erro, bot pergunta clarificação ("não entendi, pode escrever?")
+### Cat 1: LID-CAPTURE (Fase 3 — fix base @lid)
 
-### Cat 5: TESTES REGRESSÃO
+- [ ] **LID-01**: Webhook `GROUP_PARTICIPANTS_UPDATE` separa `@lid` de telefones limpos no array `participants` *(workdir 20/05)*
+- [ ] **LID-02**: Quando só `@lid` entrou E exatamente 1 lead aguardando no grupo → grava marker `LEAD_LID:{grupo_jid}:{lid}` + chama `processar_entrada_lead_no_grupo` *(workdir 20/05)*
+- [ ] **LID-03**: Quando >1 lead aguardando → loga ambiguidade, não promove, aguarda próximo sinal *(workdir 20/05)*
+- [ ] **LID-04**: `verificar_lead_no_grupo` aceita parâmetro opcional `lead_lid: str = ""` *(workdir 20/05)*
+- [ ] **LID-05**: No loop de participants do probe, casa por `pjid == lead_lid` (case-insensitive) além do telefone limpo *(workdir 20/05)*
+- [ ] **LID-06**: Helper `_get_lead_lid_for_group(sb, empresa_id, telefone, grupo_jid)` lê marker LEAD_LID mais recente *(workdir 20/05)*
+- [ ] **LID-07**: 6 callers em `grupo_fallback.py` threadeados pra ler lid antes de chamar probe *(workdir 20/05)*
+- [ ] **LID-08**: Caller em `confirmacao_agendamento.py:289` threadeado *(workdir 20/05)*
 
-- [ ] **TEST-01**: Suite T1-T8 documentada em ANALISE_DETALHADA_DEFEITOS.md
-- [ ] **TEST-02**: Test harness pytest + httpx mocking
-- [ ] **TEST-03**: Stub Evolution API
-- [ ] **TEST-04**: Stub Google Calendar
-- [ ] **TEST-05**: Stub LLM (responses fixos)
-- [ ] **TEST-06**: T1: 3 "Sim" em 5s → 3 msgs do bot (não 9)
-- [ ] **TEST-07**: T2: Áudio Whisper imperfeito → identifica slot ou pergunta
-- [ ] **TEST-08**: T3: Ordem chegada respeitada na queue
-- [ ] **TEST-09**: T4: Slot-pick correto "dia X às Y"
-- [ ] **TEST-10**: T5: Não regredir flow happy path
-- [ ] **TEST-11**: Lock contention: 5 webhooks simultâneos
-- [ ] **TEST-12**: Lock TTL: lock órfão limpo após 60s
+### Cat 2: LID-CAPTURE-DEFESA (Fase 4 — segunda fonte)
 
-### Cat 6: DOCUMENTAÇÃO + OBSERVABILIDADE
+- [ ] **LID-D-01**: Webhook agente (`_processar_webhook_evolution_inner`) detecta msg com `key.remoteJid` terminando em `@g.us` (grupo)
+- [ ] **LID-D-02**: Extrai `key.participant` (formato `<lid>@lid` ou `<phone>@s.whatsapp.net`)
+- [ ] **LID-D-03**: Se grupo tem GRUPO_AGUARDANDO_ENTRADA + 1 único lead aguardando → grava `LEAD_LID` + promove via `processar_entrada_lead_no_grupo` (idempotente)
+- [ ] **LID-D-04**: Não interfere no processamento normal da msg (1-1 message handler continua sua lógica)
+- [ ] **LID-D-05**: Logs `[LID-CAPTURE-MSG]` estruturados pra observabilidade
 
-- [ ] **DOC-01**: Memória `agente_ia_fixes.md` atualizada com fluxo lock + queue
-- [ ] **DOC-02**: Diagrama sequência webhook handler
-- [ ] **OBS-01**: Endpoint `/admin/queue-stats?empresa_id=X` retorna queue depth e lock status
-- [ ] **OBS-02**: Logs `[LOCK]` + `[QUEUE]` + `[DEDUP]` estruturados
+### Cat 3: ADMIN (Fase 5 — backfill + observabilidade)
+
+- [ ] **ADMIN-01**: Endpoint `POST /admin/grupo/forcar-revalidacao` body `{ empresa_id, telefone, agendamento_id }` — re-probe Evolution live + sincroniza FSM
+- [ ] **ADMIN-02**: Suporta override manual: se admin adicionou lead no grupo via WhatsApp da Rejane, endpoint força FSM=ATIVO e atualiza `criado_em` do marker mais recente
+- [ ] **ADMIN-03**: Endpoint `GET /admin/grupo/status?empresa_id=X[&state=FALLBACK_1_1]` — JSON com (lead_id, nome, telefone, grupo_jid, agendamento_id, FSM_state, probe_live_now, has_lead_lid, tempo_aguardando)
+- [ ] **ADMIN-04**: Auth via header `X-Admin-Key` (Supabase service role key) — sem auth normal de usuário admin
+
+### Cat 4: ANTI-SPAM AUDIT (Fase 6)
+
+- [ ] **SPAM-01**: Mapear o que `ANTI_SPAM_LOOP:rate_alto` bloqueia hoje (grep `agente.py:4170-4268`)
+- [ ] **SPAM-02**: Validar via logs Easypanel se convite nativo da Patrícia (20/05 16:27:25) chegou no WhatsApp dela
+- [ ] **SPAM-03**: Whitelist `enviar_convite_grupo` e `enviar_mensagem` do fluxo de grupo no anti-spam (não devem ser bloqueados por rate_alto da conversa do lead)
+- [ ] **SPAM-04**: Loga `[ANTI-SPAM-BYPASS]` quando convite nativo passa apesar de marker rate_alto
+
+### Cat 5: QUALIFICACAO LOCK ORDEM (Fase 7)
+
+- [ ] **QLOCK-01**: `popular_qs_se_faltando(sb, empresa_id, telefone, nome_lead, when_iso)` chamada ANTES de `_criar_grupo_agendamento` retornar (em `leads.py`)
+- [ ] **QLOCK-02**: Mesma chamada antes do tool path do agente (em `agente.py` onde tool `criar_agendamento` é executado)
+- [ ] **QLOCK-03**: Validar que persona (nome do agente) fica selada junto — agente.py não pode trocar Maia/Bia mid-conversa
+- [ ] **QLOCK-04**: Backfill validado: caso Patrícia regressão (Q1/Q2 não dispara 2x após lock selado)
+
+### Cat 6: TESTES (Fase 9)
+
+- [ ] **TEST-G1**: Lead entra com telefone limpo → webhook GROUP_PARTICIPANTS_UPDATE → match por telefone → FSM=ATIVO
+- [ ] **TEST-G2**: Lead entra só com `@lid` + 1 único lead aguardando → marker `LEAD_LID` salvo → probe casa por lid → FSM=ATIVO
+- [ ] **TEST-G3**: Lead nunca entra → 30s convite DM + 90s alerta grupo + 30min FALLBACK_1_1 transition
+- [ ] **TEST-G4**: 2 leads aguardando + `@lid` ambíguo → log de ambiguidade, FSM permanece AGUARDANDO até próximo sinal
+- [ ] **TEST-G5**: Caso Patrícia regressão: agendamento → `qualificacao_lock` selada → próxima msg do lead não dispara Q1/Q2 de novo
+- [ ] **TEST-G6**: Caso Karla regressão: lead em FALLBACK_1_1, admin chama `/admin/grupo/forcar-revalidacao` → probe confirma in_group=True → FSM=ATIVO
+
+### Cat 7: DOC + OBSERVABILIDADE
+
+- [ ] **DOC-G1**: Memória nova `sessao_2026-05-XX_grupo_robusto.md` com arquitetura `@lid` + casos resolvidos
+- [ ] **DOC-G2**: Atualizar `agente_referencia_compilada.md` com novos markers + endpoints admin
+- [ ] **OBS-G1**: Logs `[LEAD-LID]`, `[LID-CAPTURE-MSG]`, `[ANTI-SPAM-BYPASS]` estruturados em todas as operações
 
 ---
 
 ## Future (próximos milestones)
 
-- Multi-instance backend (advisory locks Postgres ou Redis)
-- WebSocket / SSE realtime no frontend
-- Frontend admin pra visualizar queue depth e locks ativos
-- Refator FSM de fases pra suportar paralelo seguro
+- Coluna `leads.lid_whatsapp` (se >100 leads com @lid persistido, marker pode pesar)
+- Endpoint Evolution alternativo (`checkNumberStatus`) como fallback de probe
+- Dashboard frontend pra `/admin/grupo/status` (hoje só JSON)
+- Suite testes T1-T8 do v2.0 (audio + queue regression)
+- Multi-instance backend (advisory locks Postgres)
+- WebSocket / SSE realtime
 
 ## Out of Scope (deste milestone)
 
 | Feature | Reason |
 |---------|--------|
-| Migração Postgres → Redis | Postgres handle 1 worker single-instance |
-| Rewrite FSM completo | Só ajustes pontuais necessários |
-| Mudança LLM provider | gpt-4.1 funcional, segue |
-| Nova feature do frontend | Foco backend |
-| Multi-tenant onboarding | Empresa única hoje, multi-tenant ready estrutural |
+| Coluna `leads.lid_whatsapp` | Marker em conversas é suficiente, evita migration |
+| Endpoint Evolution alternativo (`checkNumberStatus`) | `findGroupInfos` cobre com `@lid` mapped |
+| Reescrita FSM AGUARDANDO/FALLBACK_1_1/ATIVO | Já funciona, só faltava o match |
+| Cache de probe Evolution | Taxa atual ~5-10/min, sem pressão |
+| Reescrever ANTI_SPAM_LOOP detector | Só whitelist o convite nativo |
+| Eventos webhook adicionais (CONNECTION_UPDATE, CONTACTS_UPSERT) | Os 2 atuais cobrem |
+| Multi-instance backend | Single-instance hoje (carryover v2.0 decision) |
+| Migração Postgres → Redis | Postgres handle 1 worker bem |
 
 ---
 
 ## Traceability (preenchida pelo roadmapper)
 
-(empty)
+| Requirement | Phase | Plan |
+|-------------|-------|------|
+| LID-01..08 | Fase 3 (Fix @lid base) | 03-01-PLAN.md |
+| LID-D-01..05 | Fase 4 (Captura via MESSAGES_UPSERT) | 04-01-PLAN.md |
+| ADMIN-01..04 | Fase 5 (Endpoints admin) | 05-01-PLAN.md |
+| SPAM-01..04 | Fase 6 (Whitelist anti-spam) | 06-01-PLAN.md |
+| QLOCK-01..04 | Fase 7 (qualificacao_lock antes do grupo) | 07-01-PLAN.md |
+| (ADMIN-03..04) | Fase 8 (Observabilidade dashboard) | 08-01-PLAN.md |
+| TEST-G1..G6 + DOC-G1..G2 + OBS-G1 | Fase 9 (Testes regressão + doc) | 09-01-PLAN.md |
 
 ---
 
-*Last updated: 2026-05-03 — milestone v2.0 iniciado, foco em lock atômico*
+*Last updated: 2026-05-20 — v2.0 phases validated (shippado ad-hoc), milestone v2.1 Grupo Robusto iniciado*

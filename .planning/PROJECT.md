@@ -16,18 +16,22 @@ Lead preenche formulário externo → webhook cria lead no Leadflow → agente I
 
 **Operador (admin)** entra no frontend, vê leads/conversas em tempo real, configura prompt e horários, monitora pipeline, sem abrir outras ferramentas.
 
-## Current Milestone: v2.0 Agente IA Atomic Processing
+## Current Milestone: v2.1 Grupo WhatsApp Robusto
 
-**Goal:** Eliminar race conditions e duplicações no processamento de webhooks do agente IA, garantindo agendamento determinístico mesmo com múltiplas mensagens consecutivas, áudios com Whisper imperfeito, e respostas LLM fora do trilho.
+**Goal:** Eliminar definitivamente bugs de detecção de lead no grupo WhatsApp, capturando `@lid` (Linked ID de privacidade) em múltiplas fontes e usando como chave alternativa ao telefone em todos os probes, preservando 100% das camadas defensivas já implementadas.
 
 **Target features:**
-- Lock atômico por (empresa_id, telefone) com queue serializando webhooks paralelos
-- Dedup universal antes de qualquer send (Q1, Q2, empathy, slots, agendamento)
-- Single slot offer per cycle (nunca 2 sets de SLOTS_TOKENS no histórico)
-- Slot-pick determinístico (matching direto de números na msg vs tokens disponíveis)
-- Suite de testes regressão T1-T8 (casos reais documentados)
+- Captura `@lid` via webhook `GROUP_PARTICIPANTS_UPDATE` + heurística unique-aguardando (Fase 3 — parcial no workdir, 20/05)
+- Captura `@lid` via `MESSAGES_UPSERT` no grupo (defesa-em-profundidade — Fase 4)
+- Endpoint admin `/admin/grupo/forcar-revalidacao` (substitui SQL manual — Fase 5)
+- Audit + whitelist `ANTI_SPAM_LOOP` pra convite nativo (Fase 6)
+- Selar `qualificacao_lock` ANTES de criar grupo (corrige Q1/Q2 duplicada — Fase 7)
+- Dashboard admin `/admin/grupo/status?empresa_id=X` (observabilidade — Fase 8)
+- Suite testes regressão T1-T5 (Fase 9)
 
-**Histórico imediato:** sessão de 03/05 produziu 10 commits de band-aids (e7a9a88, a2e236d, b85e7ef, b982972, 8d3147d, 3264ee4, cce4591, 9acbe42, c16aefc, abb9168) que mitigaram sintomas mas não resolveram a causa raiz: ausência de lock atômico. Os band-aids ficam (ANTI-ANUNCIO regex, SLOTS-RESCUE, FILLUP, ULTRA-FALLBACK, OVERRIDE, dedup local Q1/Q2) — são camadas de defesa válidas. Esta milestone resolve a causa raiz.
+**Causa-raiz comprovada (sessão 2026-05-20):** WhatsApp esconde o telefone do lead como `@lid` (Linked ID) quando a privacidade é alta. Sem mapping bidirecional confiável `phone ↔ @lid`, `verificar_lead_no_grupo` retorna chute. Todos os bugs catalogados desde 04/05 (Gessiana, Luciane 11/05, Vanusa 13/05, Luciane 18-19/05, Karla 20/05, Patrícia 20/05) são manifestações dessa causa única — cada patch anterior foi um trade-off diferente entre falso positivo e falso negativo. Esta milestone elimina o trade-off ao tornar o `@lid` uma identidade persistida e match-able.
+
+**Histórico v2.0 (Agente IA Atomic Processing):** Phases 1-2 (Lock Atômico + Dedup Universal) foram shippadas ad-hoc em prod durante a sessão 06/05 (10 commits) e validadas. Phase 3 (OFERTA_ATIVA + slot-pick determinístico) também em prod. Phase 4 (Whisper) e suite testes T1-T8 ficam abertas pra próximo milestone se ressurgirem.
 
 ## Requirements
 
@@ -52,29 +56,51 @@ Lead preenche formulário externo → webhook cria lead no Leadflow → agente I
 - ✓ Frontend v2 deployado: Dashboard, Leads, Conversas, Pipeline, Agente IA, Configurações com dados reais
 - ✓ FollowupEditor + AquecimentoEditor com upload mídia + DelayPicker
 
-### Active (Milestone v2.0)
+### Validated (shippado ad-hoc em prod durante sessões 04-06/05, sem ciclo GSD)
 
-- [ ] **LOCK-01**: Tabela `processing_locks` com unique constraint (empresa_id, telefone) e auto-expire 60s
-- [ ] **LOCK-02**: Webhook handler adquire lock atômico antes de processar mensagem; libera ao final
-- [ ] **LOCK-03**: Mensagens enfileiradas (QUEUED marker) quando lock ativo; processadas em ordem após release
-- [ ] **LOCK-04**: TTL/cleanup de locks órfãos (processo morreu no meio) via job periódico
-- [ ] **DEDUP-01**: Dedup universal antes de send_text (Q1, Q2, empathy, slots, "Marcadinho!"): query DB last 30s para conteúdo idêntico → skip
-- [ ] **DEDUP-02**: Marker `OFERTA_ATIVA:{ts}` por lead — segunda oferta em <2min reusa a primeira (não cria novo SLOTS_TOKENS)
-- [ ] **DEDUP-03**: Unique index em `conversas(empresa_id, telefone, conteudo, role)` para markers de sistema (impede duplicatas via race)
-- [ ] **SLOT-01**: Slot-pick atômico — sempre usa OFERTA_ATIVA mais recente (não "última msg do histórico"); matching direto nums vs tokens
-- [ ] **SLOT-02**: Quando ambíguo ou sem match, BLOQUEIA tool e re-apresenta os 3 slots vigentes pedindo clarificação
-- [ ] **AUDIO-01**: Whisper transcription tolerante a ruído — números livres extraídos, cruzados com tokens; nunca confia 100% no texto transcrito
-- [ ] **TEST-01**: Suite de testes T1-T8 (casos reais documentados em ANALISE_DETALHADA_DEFEITOS.md)
-- [ ] **TEST-02**: Test harness com webhook mocking + Evolution stub + Calendar stub
-- [ ] **DOC-01**: Documentação operacional do novo fluxo (lock, queue, dedup) em `agente_ia_fixes.md`
+- ✓ **LOCK-01..04**: Tabela `processing_locks` + acquire/release/cleanup em `app/services/lock.py`, integrada no webhook em prod desde 06/05
+- ✓ **DEDUP-01..03**: `send_text_uma_vez` + marker `OFERTA_ATIVA` + unique index conversas em prod
+- ✓ **SLOT-01..02**: Slot-pick direto nums vs tokens (build `2026-05-03-slot-pick-direto-numeros-vs-tokens`)
+
+### Validated (sessões 18-19/05, grupo WhatsApp camadas defesa)
+
+- ✓ Fase 1 grupo 18/05: removida presunção `@lid=True` em `verificar_lead_no_grupo` + revalidação em 3 paths que não validavam (commits 4 patches)
+- ✓ Fase 4 18/05: regra unificada probe Evolution + FSM (AND) nos 3 sistemas (aquec, notif, confirmação D-1)
+- ✓ FSM bypass fix 19/05: `FSM=ATIVO` herdado sempre revalida via probe live
+- ✓ Convite nativo nominal 19/05: descrição com `nome_responsavel` configurável por empresa
+- ✓ Selador qualificação `qualificacao_lock.py` 18/05 (Q1+Q2+Q3+empatia ao virar agendado)
+- ✓ Guard webhook 18/05: não cria lead fake se telefone desconhecido
+- ✓ Whitelist `safety_net` 18/05: 23 motivos (autoresposta WA Business etc)
+- ✓ Pipeline kanban Fase 3 18/05: colunas `agendamento_confirmado` + `no_show` com auto-move via D-1
+
+### Active (Milestone v2.1)
+
+- [ ] **LID-01**: Webhook `GROUP_PARTICIPANTS_UPDATE` separa `@lid` de telefones limpos, grava marker `LEAD_LID:{grupo_jid}:{lid}` quando há exatamente 1 lead aguardando no grupo *(no workdir 20/05)*
+- [ ] **LID-02**: `verificar_lead_no_grupo` aceita parâmetro `lead_lid` e usa como matcher alternativo ao telefone no loop de participants *(no workdir 20/05)*
+- [ ] **LID-03**: Helper `_get_lead_lid_for_group(sb, empresa_id, telefone, grupo_jid)` lê marker mais recente; 7 callers threadeados (grupo_fallback.py 6x + confirmacao_agendamento.py 1x) *(no workdir 20/05)*
+- [ ] **LID-04**: Webhook agente captura `@lid` via `MESSAGES_UPSERT.data.key.participant` quando msg vem de grupo aguardando; promove FSM se exatamente 1 lead aguardando
+- [ ] **LID-05**: Backfill manual: leads existentes em FALLBACK_1_1 podem ser re-validados via endpoint admin
+- [ ] **ADMIN-01**: Endpoint `POST /admin/grupo/forcar-revalidacao { empresa_id, telefone, agendamento_id }` — re-probe + sincroniza FSM
+- [ ] **ADMIN-02**: Endpoint `GET /admin/grupo/status?empresa_id=X` — lista (lead, telefone, grupo_jid, FSM state, probe_live, has_lead_lid, tempo aguardando)
+- [ ] **SPAM-01**: Audit `ANTI_SPAM_LOOP:rate_alto` — mapear quais envios bloqueia (caso Patrícia 20/05: convite nativo card pode ter sido bloqueado)
+- [ ] **SPAM-02**: Whitelist `enviar_convite_grupo` no fluxo anti-spam — fluxo crítico de entrada não deve ser bloqueado
+- [ ] **QLOCK-01**: `popular_qs_se_faltando` chamada ANTES de `_criar_grupo_agendamento` retornar (leads.py + agente.py tool path) — fecha janela de race que permitiu Q1/Q2 dupla em Patrícia
+- [ ] **TEST-G1**: Caso lead entra com telefone limpo (sem `@lid`) → FSM=ATIVO via webhook
+- [ ] **TEST-G2**: Caso lead entra só com `@lid` → FSM=ATIVO via match `LEAD_LID`
+- [ ] **TEST-G3**: Caso lead nunca entra → FSM=FALLBACK_1_1 + DM convite + alerta grupo
+- [ ] **TEST-G4**: Caso 2 leads aguardando + `@lid` ambíguo → log, não-promove, aguarda próximo sinal
+- [ ] **TEST-G5**: Caso Patrícia regressão: Q1/Q2 não dispara 2x após `qualificacao_lock` selada
+- [ ] **DOC-G1**: Atualizar `agente_ia_fixes.md` / criar nota em memory com nova arquitetura
 
 ### Out of Scope (deste milestone)
 
-- Multi-instance backend / horizontal scaling — single Easypanel hoje
-- WebSockets / Server-Sent Events para realtime — polling é suficiente
-- Migration pra Redis / outro store de lock — Postgres é suficiente
-- Refator do FSM de fases — só ajustes pontuais necessários para suportar o lock
-- Frontend admin pra ver locks ativos — debug via SQL direto
+- Coluna `leads.lid_whatsapp` (marker em conversas é suficiente, evita migration)
+- Endpoint Evolution alternativo (`checkNumberStatus`, `fetchProfile`) pra probe — `findGroupInfos` cobre se `@lid` mapped
+- Reescrita do FSM AGUARDANDO/FALLBACK_1_1/ATIVO — já funciona, só faltava o match
+- Cache de resultado de probe Evolution — taxa atual (~5-10/min) não exige
+- Reescrever ANTI_SPAM_LOOP detector — só whitelist o convite nativo
+- Multi-instance backend (segue out-of-scope do v2.0)
+- Eventos webhook Evolution adicionais (CONNECTION_UPDATE, CONTACTS_UPSERT) — só os 2 que já usamos
 
 ## Context
 
@@ -103,15 +129,29 @@ Detalhes em `c:/Projetos/Leadflow/ANALISE_DETALHADA_DEFEITOS.md` (11 defeitos, c
 
 ## Key Decisions
 
+### v2.0 (validated em prod)
+
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Lock em tabela Postgres com unique constraint | Mais simples que Redis; postgres já é dependência | — Pending |
-| Queue em markers `QUEUED:{msg_id}` em conversas | Reusa tabela existente; sem nova infra | — Pending |
-| TTL 60s + cleanup job periódico | Previne deadlock de lock órfão | — Pending |
-| Dedup window de 30s pra mensagens idênticas | Curto suficiente pra não bloquear retry legítimo | — Pending |
-| OFERTA_ATIVA window de 2min | Lead que demora pra responder não gera 2 ofertas | — Pending |
-| Não migrar pra Redis | Postgres handle 1 worker single-instance bem | — Pending |
-| Reseta phase numbering pra v2.0 | Marco diferente, fase 1 começa do zero | — Pending |
+| Lock em tabela Postgres com unique constraint | Mais simples que Redis; postgres já é dependência | ✓ shippado 06/05 |
+| Queue em markers `QUEUED:{msg_id}` em conversas | Reusa tabela existente; sem nova infra | ✓ shippado 06/05 |
+| TTL 60s + cleanup job periódico | Previne deadlock de lock órfão | ✓ shippado 06/05 |
+| Dedup window de 30s pra mensagens idênticas | Curto suficiente pra não bloquear retry legítimo | ✓ shippado 06/05 |
+| OFERTA_ATIVA window de 2min | Lead que demora pra responder não gera 2 ofertas | ✓ shippado 06/05 |
+| Não migrar pra Redis | Postgres handle 1 worker single-instance bem | ✓ validado em prod |
+
+### v2.1 (Grupo Robusto)
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| `@lid` persistido como marker `LEAD_LID` em conversas (não coluna em leads) | Reusa tabela + unique constraint pra idempotência; evita migration | — Pending |
+| Probe Evolution aceita `lead_lid` opcional como matcher alternativo | Mantém backwards compat; callers gradualmente passam o lid | — Pending |
+| Captura `@lid` em 2 fontes paralelas (`GROUP_PARTICIPANTS_UPDATE` + `MESSAGES_UPSERT`) | Defesa-em-profundidade: webhook de grupo pode não disparar, msg do lead no grupo é evento garantido | — Pending |
+| Heurística unique-aguardando pra correlacionar `@lid` ↔ telefone | Quando >1 lead aguardando no mesmo grupo, ignora (log) e aguarda próximo sinal | — Pending |
+| Endpoint admin pra forçar revalidação em vez de SQL manual | Substitui workflow Karla 20/05; operador opera via frontend | — Pending |
+| Whitelist `enviar_convite_grupo` em ANTI_SPAM_LOOP | Convite de entrada é fluxo crítico, não spam | — Pending |
+| `qualificacao_lock` selada ANTES da criação do grupo | Fecha janela de race que permitiu Q1/Q2 dupla em Patrícia | — Pending |
+| Continua phase numbering (Fase 3-9) — não reseta | v2.0 terminou em Fase 2, timeline contínua é mais fácil de rastrear | — Decidido |
 
 ## Evolution
 
@@ -131,4 +171,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-03 — escopo expandido para Plataforma Leadflow (frontend+backend), milestone v2.0 iniciado*
+*Last updated: 2026-05-20 — v2.0 phases shippadas ad-hoc validadas, milestone v2.1 (Grupo Robusto) iniciado*
