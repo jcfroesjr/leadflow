@@ -2,33 +2,38 @@
 
 ## Current Position
 
-Phase: 3 (Fix @lid Base — workdir 20/05)
-Plan: 03-01-PLAN.md (a criar via `/gsd-plan-phase 3`)
-Status: Workdir pronto, aguardando validação + commit
-Last activity: 2026-05-20 — Milestone v2.1 (Grupo Robusto) iniciado
+Phase: COMPLETO (todas Fases 3-9 shippadas)
+Plan: —
+Status: Milestone v2.1 entregue, aguardando próxima decisão de milestone
+Last activity: 2026-05-20 — Milestone v2.1 (Grupo Robusto) entregue end-to-end
 
 ## Active Milestone
 
-**v2.1 — Grupo WhatsApp Robusto** (Fases 3-9)
+**v2.1 — Grupo WhatsApp Robusto** ✅ COMPLETO (Fases 3-9)
 
-| Fase | Nome | Status | Bloqueador |
-|------|------|--------|------------|
-| 3 | Fix @lid base | ⚡ Workdir pronto | — |
-| 4 | Captura @lid via MESSAGES_UPSERT | 📋 Aguardando | Phase 3 mergeada |
-| 5 | Endpoints admin | 📋 Aguardando | Phase 3 mergeada |
-| 6 | Whitelist anti-spam | 📋 Aguardando | — (independente) |
-| 7 | qualificacao_lock antes do grupo | 📋 Aguardando | — (independente) |
-| 8 | Frontend dashboard grupos | 📋 Opcional / próximo milestone | Phase 5 mergeada |
-| 9 | Testes regressão + doc | 📋 Aguardando | Phases 3-7 mergeadas |
+| Fase | Nome | Status | Commit |
+|------|------|--------|--------|
+| 3 | Fix @lid base | ✅ deployed | `ac301fd` |
+| 4 | Captura @lid via MESSAGES_UPSERT | ✅ deployed | `6b0295b` |
+| 5 | Endpoints admin | ✅ deployed | `6b0295b` + `207a3a9` |
+| 6 | Alerta LEAD_LID + delay 180s | ✅ deployed | `0e4c335` |
+| 7 | qualificacao_lock multi-template | ✅ deployed | `0717e1c` |
+| 8 backend | Auth bridge JWT+admin | ✅ deployed | `8d9fe5c` |
+| 8 frontend | Dashboard /admin/grupos | ✅ deployed | `f97686c` |
+| 9 | Suite testes regressão (13 testes) | ✅ commitada | `6159af5` |
 
-## Pending Tasks (this session)
+## Casos resolvidos nesta milestone
 
-- [ ] Commit + push backend (Fase 3 workdir: evolution.py, grupo_webhook.py, grupo_fallback.py, confirmacao_agendamento.py)
-- [ ] Redeploy backend no Easypanel
-- [ ] Smoke test em prod com lead novo
-- [ ] (Manual) UPDATE no Supabase Editor pra Karla 5581988280629 sair de FALLBACK_1_1 — depois substitui pelo endpoint Phase 5
-- [ ] Investigar logs Easypanel: convite nativo Patrícia 5555984248339 chegou? (input pra Phase 6)
-- [ ] Atualizar memória `sessao_2026-05-20_grupo_lid_arquitetura.md` (preserva contexto pra próxima sessão)
+- ✅ **Karla** (5581988280629, Liliane) — auto-promovida via Phase 3/4
+- ✅ **Crislaine** (5566996076259, Liliane, reunião 21/05 13h) — convite re-enviado via endpoint Phase 5
+- ✅ **Patrícia** (5555984248339, Liliane) — Phase 7 corrige Q1/Q2 dupla para persona custom
+
+## Pending Tasks (opcional, próxima sessão)
+
+- [ ] Rodar suite testes localmente após `pip install pytest pytest-asyncio` (validar 13 testes pass)
+- [ ] Smoke test do frontend dashboard `/admin/grupos` em prod
+- [ ] Expandir suite testes: Phase 4 (LID-CAPTURE-MSG), Phase 6 (alerta LEAD_LID check), TestClient FastAPI nos endpoints admin
+- [ ] Verificar Crislaine após 21/05 (reunião) — entrou no grupo? Notif foi pro DM?
 
 ## Accumulated Context (preservado entre milestones)
 
