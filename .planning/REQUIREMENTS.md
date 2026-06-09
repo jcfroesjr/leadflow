@@ -48,66 +48,76 @@ Phases 1-2 do milestone v2.0 foram entregues fora do ciclo GSD durante a sessão
 
 ---
 
-## Active — Milestone v2.1 Grupo WhatsApp Robusto
+## Validated — Milestone v2.1 Grupo WhatsApp Robusto (entregue 20/05)
 
-**Goal:** Eliminar bugs recorrentes de detecção `@lid` no grupo WhatsApp ao capturar Linked ID em múltiplas fontes (`GROUP_PARTICIPANTS_UPDATE` + `MESSAGES_UPSERT` + backfill admin) e persistir como marker, usado como matcher alternativo ao telefone em todos os probes Evolution.
+Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 0717e1c, 8d9fe5c, f97686c, 6159af5). Suite de 13 testes pytest commitada. Casos Karla/Crislaine/Patrícia resolvidos. **NÃO REGREDIR.**
 
-**Causa-raiz comprovada:** WhatsApp esconde telefone do lead como `@lid` interno por privacidade. Sem mapping `phone ↔ @lid`, probe retorna chute. Cada patch anterior foi trade-off entre falso positivo e falso negativo. Esta milestone elimina o trade-off ao tornar `@lid` identidade persistida e match-able.
+- ✓ **LID-01..08** (Fase 3): Captura @lid via `GROUP_PARTICIPANTS_UPDATE` + match no probe
+- ✓ **LID-D-01..05** (Fase 4): Captura via `MESSAGES_UPSERT` (segunda fonte)
+- ✓ **ADMIN-01..04** (Fase 5): Endpoints `/admin/grupo/forcar-revalidacao` + `/admin/grupo/status`
+- ✓ **SPAM-01..04** (Fase 6): Whitelist `enviar_convite_grupo` em ANTI_SPAM_LOOP
+- ✓ **QLOCK-01..04** (Fase 7): `qualificacao_lock` multi-template antes de criar grupo
+- ✓ **TEST-G1..G6** (Fase 9): Suite 13 testes pytest
+- ✓ **DOC-G1, DOC-G2, OBS-G1**: Memórias `sessao_2026-05-20_grupo_lid_arquitetura.md` + dashboard `/admin/grupos`
 
-### Cat 1: LID-CAPTURE (Fase 3 — fix base @lid)
+## Validated — Sessão 08/06 (6 fixes paliativos do problema raiz v2.2 vai resolver)
 
-- [ ] **LID-01**: Webhook `GROUP_PARTICIPANTS_UPDATE` separa `@lid` de telefones limpos no array `participants` *(workdir 20/05)*
-- [ ] **LID-02**: Quando só `@lid` entrou E exatamente 1 lead aguardando no grupo → grava marker `LEAD_LID:{grupo_jid}:{lid}` + chama `processar_entrada_lead_no_grupo` *(workdir 20/05)*
-- [ ] **LID-03**: Quando >1 lead aguardando → loga ambiguidade, não promove, aguarda próximo sinal *(workdir 20/05)*
-- [ ] **LID-04**: `verificar_lead_no_grupo` aceita parâmetro opcional `lead_lid: str = ""` *(workdir 20/05)*
-- [ ] **LID-05**: No loop de participants do probe, casa por `pjid == lead_lid` (case-insensitive) além do telefone limpo *(workdir 20/05)*
-- [ ] **LID-06**: Helper `_get_lead_lid_for_group(sb, empresa_id, telefone, grupo_jid)` lê marker LEAD_LID mais recente *(workdir 20/05)*
-- [ ] **LID-07**: 6 callers em `grupo_fallback.py` threadeados pra ler lid antes de chamar probe *(workdir 20/05)*
-- [ ] **LID-08**: Caller em `confirmacao_agendamento.py:289` threadeado *(workdir 20/05)*
+- ✓ **AQUEC-FLOOR-01**: MIN_FLOOR_SEG 30s→180s (commit 53bd05a)
+- ✓ **ALERTA-GRUPO-01**: Remove alerta "lead não entrou" no grupo (commit 07d7341)
+- ✓ **PROBE-BYPASS-01**: Marker GRUPO_LEAD_ENTROU_CRIACAO + bypass <5min (commit 96b72cc)
+- ✓ **GRUPO-REUSO-01**: Valida acesso a grupo antes de reusar (commit 7e366bd)
+- ✓ **RECOVERY-STARTUP-01**: Recoveries do startup async (commit ae2b141)
+- ✓ **RECOVERY-AQUEC-01**: Recovery aquec janela 6h (commit 0d55888)
+- ✓ **RLS-HARD-01**: Migration 003 RLS hardening (commit 073c93f)
 
-### Cat 2: LID-CAPTURE-DEFESA (Fase 4 — segunda fonte)
+## Active — Milestone v2.2 Webhook-First Grupo Membership
 
-- [ ] **LID-D-01**: Webhook agente (`_processar_webhook_evolution_inner`) detecta msg com `key.remoteJid` terminando em `@g.us` (grupo)
-- [ ] **LID-D-02**: Extrai `key.participant` (formato `<lid>@lid` ou `<phone>@s.whatsapp.net`)
-- [ ] **LID-D-03**: Se grupo tem GRUPO_AGUARDANDO_ENTRADA + 1 único lead aguardando → grava `LEAD_LID` + promove via `processar_entrada_lead_no_grupo` (idempotente)
-- [ ] **LID-D-04**: Não interfere no processamento normal da msg (1-1 message handler continua sua lógica)
-- [ ] **LID-D-05**: Logs `[LID-CAPTURE-MSG]` estruturados pra observabilidade
+**Goal:** Eliminar falsos negativos persistentes do probe Evolution invertendo a fonte da verdade — webhook `GROUP_PARTICIPANTS_UPDATE` torna-se primário via tabela materializada `grupo_membership`, probe Evolution vira fallback com retry exponencial + cache curto.
 
-### Cat 3: ADMIN (Fase 5 — backfill + observabilidade)
+**Causa-raiz reaberta (08-09/06):** v2.1 manteve probe Evolution como fonte primária com `@lid` como matcher alternativo. Quando Evolution mente ou demora (60-180s pra propagar membros — caso comum), todos os patches caem. Os 6 fixes do dia 08/06 são paliativos sobre a mesma base não-confiável. Esta milestone inverte: webhook é fonte primária, probe é backup.
 
-- [ ] **ADMIN-01**: Endpoint `POST /admin/grupo/forcar-revalidacao` body `{ empresa_id, telefone, agendamento_id }` — re-probe Evolution live + sincroniza FSM
-- [ ] **ADMIN-02**: Suporta override manual: se admin adicionou lead no grupo via WhatsApp da Rejane, endpoint força FSM=ATIVO e atualiza `criado_em` do marker mais recente
-- [ ] **ADMIN-03**: Endpoint `GET /admin/grupo/status?empresa_id=X[&state=FALLBACK_1_1]` — JSON com (lead_id, nome, telefone, grupo_jid, agendamento_id, FSM_state, probe_live_now, has_lead_lid, tempo_aguardando)
-- [ ] **ADMIN-04**: Auth via header `X-Admin-Key` (Supabase service role key) — sem auth normal de usuário admin
+### Cat 1: MEMBERSHIP TABLE (Fase 10 — schema + 3 paths de escrita)
 
-### Cat 4: ANTI-SPAM AUDIT (Fase 6)
+- [ ] **MEMB-01**: Migration `004_grupo_membership.sql` criando tabela `(empresa_id UUID, grupo_jid TEXT, telefone TEXT NULL, lid TEXT NULL, instance_key TEXT NOT NULL, entrou_em TIMESTAMPTZ, saiu_em TIMESTAMPTZ NULL, last_event_id TEXT, criado_em, atualizado_em)` + partial unique `WHERE saiu_em IS NULL` em `(empresa_id, grupo_jid, COALESCE(telefone, lid))` + indexes + RLS service_role only
+- [ ] **MEMB-02**: Webhook `GROUP_PARTICIPANTS_UPDATE` (Path 1) UPSERT em `grupo_membership` quando `action="add"` (entrou_em = `messageTimestamp` do payload, NÃO `NOW()`)
+- [ ] **MEMB-03**: Webhook `MESSAGES_UPSERT` (Path 2) UPSERT em `grupo_membership` quando msg vem de grupo + 1 lead aguardando + @lid não-mapped ainda
+- [ ] **MEMB-04**: `_criar_grupo_agendamento` (Path 3 — createGroup response) faz INSERT direto em `grupo_membership` pro participant retornado por Evolution (caso Ana Carla: webhook ADD não dispara aqui)
+- [ ] **MEMB-05**: Função `lead_in_group(sb, empresa_id, telefone, grupo_jid, lid="") -> dict {in_group, source, last_event_at, instance_key_match}` consulta `grupo_membership` PRIMEIRO; só vai pro probe Evolution se row ausente OU saiu_em != null
+- [ ] **MEMB-06**: Query filtra `WHERE instance_key = empresa.evolution_key_atual` — rows de instância antiga (Fernanda) NÃO contam
 
-- [ ] **SPAM-01**: Mapear o que `ANTI_SPAM_LOOP:rate_alto` bloqueia hoje (grep `agente.py:4170-4268`)
-- [ ] **SPAM-02**: Validar via logs Easypanel se convite nativo da Patrícia (20/05 16:27:25) chegou no WhatsApp dela
-- [ ] **SPAM-03**: Whitelist `enviar_convite_grupo` e `enviar_mensagem` do fluxo de grupo no anti-spam (não devem ser bloqueados por rate_alto da conversa do lead)
-- [ ] **SPAM-04**: Loga `[ANTI-SPAM-BYPASS]` quando convite nativo passa apesar de marker rate_alto
+### Cat 2: PROBE FALLBACK COM RETRY + CACHE (Fase 11-12)
 
-### Cat 5: QUALIFICACAO LOCK ORDEM (Fase 7)
+- [ ] **PROBE-CACHE-01**: Singleton `app/services/probe_cache.py` com `cachetools.TTLCache(maxsize=512, ttl=300)` + `RLock`; chave `(empresa_id, grupo_jid, telefone, lid)`; invalidação automática em todo UPSERT de `grupo_membership` via helper centralizado
+- [ ] **PROBE-COALESCE-01**: `asyncio.Lock` por chave evita 3 jobs probando o mesmo grupo simultaneamente (caso comum quando aquec+notif+timeout disparam na mesma janela)
+- [ ] **PROBE-RETRY-01**: Função `schedule_probe_retry(empresa_id, grupo_jid, telefone, lid, attempts_left=3, max_age_seconds=600)` — job APScheduler one-shot `trigger='date'`. Tentativas em 30s/2min/5min. **`max_age_seconds` absoluto** descarta job se janela passou (cobre Rosânia + Valquíria).
+- [ ] **PROBE-RETRY-02**: Migrar callers com margem temporal (notif pré-reunião, timeout 30min FALLBACK) pra usar retry async em vez de probe síncrono. Aquec mantém síncrono mas consulta `grupo_membership` primeiro.
 
-- [ ] **QLOCK-01**: `popular_qs_se_faltando(sb, empresa_id, telefone, nome_lead, when_iso)` chamada ANTES de `_criar_grupo_agendamento` retornar (em `leads.py`)
-- [ ] **QLOCK-02**: Mesma chamada antes do tool path do agente (em `agente.py` onde tool `criar_agendamento` é executado)
-- [ ] **QLOCK-03**: Validar que persona (nome do agente) fica selada junto — agente.py não pode trocar Maia/Bia mid-conversa
-- [ ] **QLOCK-04**: Backfill validado: caso Patrícia regressão (Q1/Q2 não dispara 2x após lock selado)
+### Cat 3: LEAVE HANDLER (Fase 13)
 
-### Cat 6: TESTES (Fase 9)
+- [ ] **LEAVE-01**: Webhook `GROUP_PARTICIPANTS_UPDATE action="remove"` marca `grupo_membership.saiu_em = messageTimestamp` + insere marker `LEAD_SAIU_GRUPO:{grupo_jid}:{ts}` em conversas
+- [ ] **LEAVE-02**: Notif pré-reunião + D-1 detectam `saiu_em != null` na `lead_in_group()` E redirecionam pro DM (não pra grupo vazio)
+- [ ] **LEAVE-03**: FSM de grupo do lead que saiu volta pra `FALLBACK_1_1` (com flag `LEFT_GROUP` no marker GRUPO_STATE_CHANGE)
 
-- [ ] **TEST-G1**: Lead entra com telefone limpo → webhook GROUP_PARTICIPANTS_UPDATE → match por telefone → FSM=ATIVO
-- [ ] **TEST-G2**: Lead entra só com `@lid` + 1 único lead aguardando → marker `LEAD_LID` salvo → probe casa por lid → FSM=ATIVO
-- [ ] **TEST-G3**: Lead nunca entra → 30s convite DM + 90s alerta grupo + 30min FALLBACK_1_1 transition
-- [ ] **TEST-G4**: 2 leads aguardando + `@lid` ambíguo → log de ambiguidade, FSM permanece AGUARDANDO até próximo sinal
-- [ ] **TEST-G5**: Caso Patrícia regressão: agendamento → `qualificacao_lock` selada → próxima msg do lead não dispara Q1/Q2 de novo
-- [ ] **TEST-G6**: Caso Karla regressão: lead em FALLBACK_1_1, admin chama `/admin/grupo/forcar-revalidacao` → probe confirma in_group=True → FSM=ATIVO
+### Cat 4: FSM MONOTÔNICO + AUDIT LOG (Fase 13)
 
-### Cat 7: DOC + OBSERVABILIDADE
+- [ ] **FSM-AUDIT-01**: `set_grupo_state()` valida transição estritamente monotônica: `AGUARDANDO→FALLBACK_1_1→ATIVO` é ok; `ATIVO→AGUARDANDO` BLOQUEADO sem flag `force=True` (só endpoint admin pode forçar)
+- [ ] **FSM-AUDIT-02**: Toda transição grava marker `GRUPO_STATE_CHANGE:{ag_id}:{from}:{to}:{reason}:{caller}` em conversas; argumento `caller` é obrigatório sem default
+- [ ] **FSM-AUDIT-03**: Audit log volume ~150 rows/dia (desprezível); CI grep check garante que nenhum caller chama `set_grupo_state` sem `reason` e `caller`
 
-- [ ] **DOC-G1**: Memória nova `sessao_2026-05-XX_grupo_robusto.md` com arquitetura `@lid` + casos resolvidos
-- [ ] **DOC-G2**: Atualizar `agente_referencia_compilada.md` com novos markers + endpoints admin
-- [ ] **OBS-G1**: Logs `[LEAD-LID]`, `[LID-CAPTURE-MSG]`, `[ANTI-SPAM-BYPASS]` estruturados em todas as operações
+### Cat 5: TESTES REGRESSÃO (Fase 14)
+
+- [ ] **TEST-V2-G1**: Caso Ana Carla 08/06 — lead adicionado direto em `createGroup`, `grupo_membership` populada via Path 3, FSM=ATIVO em <60s sem precisar probe live
+- [ ] **TEST-V2-G2**: Caso Rosânia 08/06 — webhook GROUP_PARTICIPANTS_UPDATE chega T+138s, sistema espera (probe retry com `max_age=600s`) em vez de cair pro DM
+- [ ] **TEST-V2-G3**: Caso Fernanda 07/06 — grupo órfão de instância antiga detectado em `lead_in_group` (instance_key mismatch) E novo grupo criado automático
+- [ ] **TEST-V2-G4**: Caso Valquíria 06/06 — aquec recovery não dispara item velho (cobertura adicional ao RECOVERY-AQUEC-01); job retry descartado por `max_age_seconds`
+- [ ] **TEST-V2-G5**: Caso 553891500357 09/06 — reprodução completa *(blocked-pending-data: precisa de trace do webhook + conversas do incidente)*
+
+### Cat 6: DOC + OBSERVABILIDADE (Fase 14)
+
+- [ ] **DOC-V2-G1**: Memória `sessao_2026-06-XX_grupo_membership_v2.md` + nova `grupo_membership_arquitetura.md` em memory
+- [ ] **DOC-V2-G2**: Atualizar `agente_referencia_compilada.md` com tabela `grupo_membership` + `lead_in_group()` + retry async + FSM audit
+- [ ] **OBS-V2-G1**: Logs `[MEMB-WRITE]`, `[MEMB-LOOKUP]`, `[PROBE-RETRY]`, `[GRUPO-STATE-CHANGE]` estruturados
+- [ ] **OBS-V2-G2**: Endpoint `/health/grupo-membership` retorna `{total_rows, last_write_at, cache_size, cache_hit_rate}` pra detectar cache mascarando falha de persistência
 
 ---
 
@@ -120,18 +130,19 @@ Phases 1-2 do milestone v2.0 foram entregues fora do ciclo GSD durante a sessão
 - Multi-instance backend (advisory locks Postgres)
 - WebSocket / SSE realtime
 
-## Out of Scope (deste milestone)
+## Out of Scope (milestone v2.2)
 
 | Feature | Reason |
 |---------|--------|
-| Coluna `leads.lid_whatsapp` | Marker em conversas é suficiente, evita migration |
-| Endpoint Evolution alternativo (`checkNumberStatus`) | `findGroupInfos` cobre com `@lid` mapped |
-| Reescrita FSM AGUARDANDO/FALLBACK_1_1/ATIVO | Já funciona, só faltava o match |
-| Cache de probe Evolution | Taxa atual ~5-10/min, sem pressão |
-| Reescrever ANTI_SPAM_LOOP detector | Só whitelist o convite nativo |
-| Eventos webhook adicionais (CONNECTION_UPDATE, CONTACTS_UPSERT) | Os 2 atuais cobrem |
-| Multi-instance backend | Single-instance hoje (carryover v2.0 decision) |
-| Migração Postgres → Redis | Postgres handle 1 worker bem |
+| Coluna `leads.lid_whatsapp` | Tabela dedicada `grupo_membership` cobre N:N (lead × grupo) |
+| Backfill retroativo de `grupo_membership` pra grupos antigos | Custo de migration alto; grupos antigos seguem com markers v2.1 |
+| Reescrita FSM AGUARDANDO/FALLBACK_1_1/ATIVO | Só endurecer transições (monotônico) + audit log |
+| Reescrita do probe Evolution em si | Só adicionar retry+cache em volta |
+| Migração Postgres → Redis pro cache | In-memory `cachetools.TTLCache` é suficiente (single-worker) |
+| Multi-instance backend | Single-instance hoje (carryover v2.0/v2.1 decision) |
+| Eventos webhook adicionais além dos 4 já usados | GROUP_PARTICIPANTS_UPDATE + MESSAGES_UPSERT + CONNECTION_UPDATE + MESSAGES_UPDATE cobrem |
+| Nova tabela `grupo_audit_log` separada | Audit log via marker em `conversas` reusa unique constraint + RLS |
+| Frontend dashboard pra `grupo_membership` view | Dashboard `/admin/grupos` (v2.1) continua suficiente pra observabilidade humana |
 
 ---
 
@@ -139,14 +150,28 @@ Phases 1-2 do milestone v2.0 foram entregues fora do ciclo GSD durante a sessão
 
 | Requirement | Phase | Plan |
 |-------------|-------|------|
-| LID-01..08 | Fase 3 (Fix @lid base) | 03-01-PLAN.md |
-| LID-D-01..05 | Fase 4 (Captura via MESSAGES_UPSERT) | 04-01-PLAN.md |
-| ADMIN-01..04 | Fase 5 (Endpoints admin) | 05-01-PLAN.md |
-| SPAM-01..04 | Fase 6 (Whitelist anti-spam) | 06-01-PLAN.md |
-| QLOCK-01..04 | Fase 7 (qualificacao_lock antes do grupo) | 07-01-PLAN.md |
-| (ADMIN-03..04) | Fase 8 (Observabilidade dashboard) | 08-01-PLAN.md |
-| TEST-G1..G6 + DOC-G1..G2 + OBS-G1 | Fase 9 (Testes regressão + doc) | 09-01-PLAN.md |
+### v2.1 (Fases 3-9 — shippadas 20/05)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| LID-01..08 | Fase 3 | ✓ shippado (ac301fd) |
+| LID-D-01..05 | Fase 4 | ✓ shippado (6b0295b) |
+| ADMIN-01..04 | Fase 5 | ✓ shippado (207a3a9) |
+| SPAM-01..04 | Fase 6 | ✓ shippado (0e4c335) |
+| QLOCK-01..04 | Fase 7 | ✓ shippado (0717e1c) |
+| (ADMIN-03..04 frontend) | Fase 8 | ✓ shippado (8d9fe5c + f97686c) |
+| TEST-G1..G6 + DOC-G1..G2 + OBS-G1 | Fase 9 | ✓ commitado (6159af5) |
+
+### v2.2 (Fases 10-14 — em planejamento, roadmapper preenche)
+
+| Requirement | Phase | Plan |
+|-------------|-------|------|
+| MEMB-01..06 + PROBE-CACHE-01 + PROBE-COALESCE-01 | Fase 10 | _pending_ |
+| (consumo de `lead_in_group`) + migrar fallback callers | Fase 11 | _pending_ |
+| PROBE-RETRY-01..02 | Fase 12 | _pending_ |
+| LEAVE-01..03 + FSM-AUDIT-01..03 | Fase 13 | _pending_ |
+| TEST-V2-G1..G5 + DOC-V2-G1..G2 + OBS-V2-G1..G2 | Fase 14 | _pending_ |
 
 ---
 
-*Last updated: 2026-05-20 — v2.0 phases validated (shippado ad-hoc), milestone v2.1 Grupo Robusto iniciado*
+*Last updated: 2026-06-09 — v2.1 entregue 20/05; v2.2 (Webhook-First Grupo Membership) iniciado após 6 fixes paliativos do 08/06 não cobrirem casos persistentes*
