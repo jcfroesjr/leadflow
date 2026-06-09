@@ -115,3 +115,18 @@ None — changes are limited to a constant string bump (BUILD_VERSION) and addin
 - Submodule pushed to GitHub — CONFIRMED (`git log origin/main..HEAD` empty)
 - pytest 46/52 — VERIFIED
 - Smoke "TODOS OS SMOKES PASSARAM" — VERIFIED
+
+## Checkpoint Resolution (Task 5) — 2026-06-09 ~20:30
+
+**Status: APPROVED (prod validated).** Easypanel auto-built from the GitHub push.
+
+Prod smoke results:
+- `curl /version` → `2026-06-09-lead-in-group-consumer` ✅
+- `curl /admin/grupo-membership/health` → `phase: "11-consumer"`, `lookup_stats.lock_dict_size: 0`, Fase 10 fields (`cache_stats`, `total_rows`, `last_write_at`, `writes_by_source_24h`) present ✅
+- `total_rows: 0` (no group events since deploy — expected on fresh cutover; #3/#4 live-log behavioral watch deferred to natural traffic / HUMAN-UAT)
+
+### Production blocker found & fixed at checkpoint — `42501 permission denied`
+First prod run of the Fase 10+11 code (prod was on the 06-08 build until this deploy) surfaced `permission denied for table grupo_membership` on every direct read.
+
+- **Root cause:** migration 004 enabled RLS + a `service_role` policy + `GRANT EXECUTE` on the upsert RPC, but never granted **table-level** privileges. Writes worked (via `SECURITY DEFINER` RPC); direct reads (`lead_in_group._query_membership_row` + healthcheck) run as `service_role` through PostgREST and need an explicit table GRANT. Without it the consumer silently degraded to a probe on every lookup — defeating the webhook-first goal (no crash; defensive fallback).
+- **Fix:** `005_grupo_membership_grants.sql` — `GRANT SELECT/INSERT/UPDATE/DELETE ON public.grupo_membership` + `GRANT USAGE,SELECT ON SEQUENCE grupo_membership_id_seq` `TO service_role`. Idempotent. Committed (submodule `8a71c19`, parent `b10469c`), pushed, and applied to prod via Supabase SQL Editor. Re-smoke confirmed the `*_erro` keys gone.
