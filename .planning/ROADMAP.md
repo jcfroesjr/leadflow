@@ -96,7 +96,7 @@ Casos Karla, Crislaine, Patricia resolvidos. NAO REVERTER.
 
 v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta).
 
-- [ ] **Phase 10: Schema + 3 paths webhook write + cache standalone** - Tabela `grupo_membership` com `instance_key` + UPSERT em 3 paths (webhook ADD, MESSAGES_UPSERT, createGroup direct) + cache singleton (coalescing movido pra Fase 11)
+- [x] **Phase 10: Schema + 3 paths webhook write + cache standalone** - Tabela `grupo_membership` com `instance_key` + UPSERT em 3 paths (webhook ADD, MESSAGES_UPSERT, createGroup direct) + cache singleton (coalescing movido pra Fase 11) (completed 2026-06-09)
 - [ ] **Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async** - Funcao central de leitura tabela-primeira + migra 6 callsites + asyncio.Lock coalescing
 - [ ] **Phase 12: Retry async + callers com margem** - APScheduler retry exponencial 30s/2min/5min com `max_age_seconds=600` absoluto + migra callers com margem temporal
 - [ ] **Phase 13: LEAVE handler + FSM audit monotonico** - Webhook REMOVE marca `saiu_em` + notif DM-first + transicoes estritamente monotonicas + audit log com `caller` obrigatorio
@@ -115,11 +115,11 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
   4. Cache singleton `cachetools.TTLCache(maxsize=512, ttl=300)` + write-through invalidate em todo UPSERT (Pitfall 2: cache mascarando falha de persistencia eliminado)
   5. RLS service_role-only ativo desde o deploy inicial — INSERT via anon key retorna 0 rows (verificavel via teste)
 **Plans**: 5 plans
-- [ ] 10-01-PLAN.md — Wave 0 pre-deps: confirmar cachetools + localizar Path 2 callsite + parse messageTimestamp shape
-- [ ] 10-02-PLAN.md — Wave 1 foundation: migration 004 (tabela + RLS + RPC) + helper upsert_grupo_membership + cache singleton
-- [ ] 10-03-PLAN.md — Wave 2 Path 1: webhook GROUP_PARTICIPANTS_UPDATE add → UPSERT em grupo_membership
-- [ ] 10-04-PLAN.md — Wave 2 Paths 2+3: MESSAGES_UPSERT @lid capture + createGroup direct write (caso Ana Carla)
-- [ ] 10-05-PLAN.md — Wave 3 tests + healthcheck skinny + BUILD_VERSION bump + smoke RLS manual
+- [x] 10-01-PLAN.md — Wave 0 pre-deps: confirmar cachetools + localizar Path 2 callsite + parse messageTimestamp shape
+- [x] 10-02-PLAN.md — Wave 1 foundation: migration 004 (tabela + RLS + RPC) + helper upsert_grupo_membership + cache singleton
+- [x] 10-03-PLAN.md — Wave 2 Path 1: webhook GROUP_PARTICIPANTS_UPDATE add → UPSERT em grupo_membership
+- [x] 10-04-PLAN.md — Wave 2 Paths 2+3: MESSAGES_UPSERT @lid capture + createGroup direct write (caso Ana Carla)
+- [x] 10-05-PLAN.md — Wave 3 tests + healthcheck skinny + BUILD_VERSION bump + smoke RLS manual
 
 ### Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async
 **Goal**: Inverter fonte da verdade nos callers criticos. Funcao central `lead_in_group()` consulta `grupo_membership` PRIMEIRO; probe Evolution so roda como fallback. Migra os 6 callsites de `verificar_lead_no_grupo` em `grupo_fallback.py` (linhas 251, 311, 337, 477, 624, 1173, 1256) para usar o novo consumer. Coalescing async via `asyncio.Lock` por chave materializa AQUI (movido da Fase 10), junto do consumer que dispara probes concorrentes.
@@ -181,7 +181,7 @@ Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. Schema + 3 paths webhook write + cache standalone | 0/5 | Planned | - |
+| 10. Schema + 3 paths webhook write + cache standalone | 5/5 | Complete    | 2026-06-09 |
 | 11. `lead_in_group()` consumer + migrar fallback callers | 0/TBD | Not started | - |
 | 12. Retry async + callers com margem | 0/TBD | Not started | - |
 | 13. LEAVE handler + FSM audit monotonico | 0/TBD | Not started | - |
