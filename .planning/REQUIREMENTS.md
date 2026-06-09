@@ -82,7 +82,7 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 - [ ] **MEMB-02**: Webhook `GROUP_PARTICIPANTS_UPDATE` (Path 1) UPSERT em `grupo_membership` quando `action="add"` (entrou_em = `messageTimestamp` do payload, NAO `NOW()`)
 - [ ] **MEMB-03**: Webhook `MESSAGES_UPSERT` (Path 2) UPSERT em `grupo_membership` quando msg vem de grupo + 1 lead aguardando + @lid nao-mapped ainda
 - [ ] **MEMB-04**: `_criar_grupo_agendamento` (Path 3 — createGroup response) faz INSERT direto em `grupo_membership` pro participant retornado por Evolution (caso Ana Carla: webhook ADD nao dispara aqui)
-- [ ] **MEMB-05**: Funcao `lead_in_group(sb, empresa_id, telefone, grupo_jid, lid="") -> dict {in_group, source, last_event_at, instance_key_match}` consulta `grupo_membership` PRIMEIRO; so vai pro probe Evolution se row ausente OU saiu_em != null
+- [x] **MEMB-05**: Funcao `lead_in_group(sb, empresa_id, telefone, grupo_jid, lid="") -> dict {in_group, source, last_event_at, instance_key_match}` consulta `grupo_membership` PRIMEIRO; so vai pro probe Evolution se row ausente OU saiu_em != null
 - [ ] **MEMB-06**: Query filtra `WHERE instance_key = empresa.evolution_key_atual` — rows de instancia antiga (Fernanda) NAO contam
 
 ### Cat 2: PROBE FALLBACK COM RETRY + CACHE (Fases 10-12)
