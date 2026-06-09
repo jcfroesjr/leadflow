@@ -170,9 +170,9 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 | MEMB-04 | Fase 10 | TBD | Pending |
 | MEMB-06 | Fase 10 | TBD | Pending |
 | PROBE-CACHE-01 | Fase 10 | TBD | Pending |
-| MEMB-05 | Fase 11 | TBD | Pending |
-| PROBE-COALESCE-01 | Fase 11 (movido da 10 em 09/06) | TBD | Pending |
-| (migracao 6 callsites grupo_fallback.py) | Fase 11 | TBD | Pending |
+| MEMB-05 | Fase 11 | 11-01, 11-02 | Planned |
+| PROBE-COALESCE-01 | Fase 11 (movido da 10 em 09/06) | 11-01 | Planned |
+| (migracao 6 callsites grupo_fallback.py) | Fase 11 | 11-02 | Planned |
 | PROBE-RETRY-01 | Fase 12 | TBD | Pending |
 | PROBE-RETRY-02 | Fase 12 | TBD | Pending |
 | LEAVE-01 | Fase 13 | TBD | Pending |
