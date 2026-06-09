@@ -2,38 +2,26 @@
 
 ## Current Position
 
-Phase: COMPLETO (todas Fases 3-9 shippadas)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Milestone v2.1 entregue, aguardando próxima decisão de milestone
-Last activity: 2026-05-20 — Milestone v2.1 (Grupo Robusto) entregue end-to-end
+Status: Milestone v2.2 iniciado — pesquisa de domínio em curso
+Last activity: 2026-06-09 — Milestone v2.2 (Webhook-First) iniciado
 
 ## Active Milestone
 
-**v2.1 — Grupo WhatsApp Robusto** ✅ COMPLETO (Fases 3-9)
+**v2.2 — Identificação Definitiva de Lead no Grupo (Webhook-First)**
 
-| Fase | Nome | Status | Commit |
-|------|------|--------|--------|
-| 3 | Fix @lid base | ✅ deployed | `ac301fd` |
-| 4 | Captura @lid via MESSAGES_UPSERT | ✅ deployed | `6b0295b` |
-| 5 | Endpoints admin | ✅ deployed | `6b0295b` + `207a3a9` |
-| 6 | Alerta LEAD_LID + delay 180s | ✅ deployed | `0e4c335` |
-| 7 | qualificacao_lock multi-template | ✅ deployed | `0717e1c` |
-| 8 backend | Auth bridge JWT+admin | ✅ deployed | `8d9fe5c` |
-| 8 frontend | Dashboard /admin/grupos | ✅ deployed | `f97686c` |
-| 9 | Suite testes regressão (13 testes) | ✅ commitada | `6159af5` |
+**Goal:** Inverter a fonte da verdade. Webhook GROUP_PARTICIPANTS_UPDATE escreve em tabela materializada `grupo_membership` (primária). Probe Evolution vira fallback com retry exponencial + cache curto.
 
-## Casos resolvidos nesta milestone
+**Phases planejadas:** começam em Fase 10 (continua numbering — v2.1 terminou em Fase 9).
 
-- ✅ **Karla** (5581988280629, Liliane) — auto-promovida via Phase 3/4
-- ✅ **Crislaine** (5566996076259, Liliane, reunião 21/05 13h) — convite re-enviado via endpoint Phase 5
-- ✅ **Patrícia** (5555984248339, Liliane) — Phase 7 corrige Q1/Q2 dupla para persona custom
+**Casos motivadores (sessão 08-09/06):**
 
-## Pending Tasks (opcional, próxima sessão)
-
-- [ ] Rodar suite testes localmente após `pip install pytest pytest-asyncio` (validar 13 testes pass)
-- [ ] Smoke test do frontend dashboard `/admin/grupos` em prod
-- [ ] Expandir suite testes: Phase 4 (LID-CAPTURE-MSG), Phase 6 (alerta LEAD_LID check), TestClient FastAPI nos endpoints admin
-- [ ] Verificar Crislaine após 21/05 (reunião) — entrou no grupo? Notif foi pro DM?
+- Ana Carla 5514998151089 (08/06 08:31) — entrou direto na createGroup, probe T+60s viu False, aquec foi pro DM
+- Rosânia 5562984551622 (08/06 23:57) — webhook chegou T+138s, aquec já tinha falhado em T+60s
+- Fernanda 5551999532715 (07/06) — grupo órfão de instância antiga (bia-rejane) reusado
+- Valquíria 5582981291203 (06/06) — aquec #4 falhou, recovery reagendou 47h depois (corrigido em 0d55888 mas é palilativo)
+- 553891500357 (09/06) — caso reportado pelo user, persiste mesmo após 6 fixes
 
 ## Accumulated Context (preservado entre milestones)
 
@@ -42,6 +30,15 @@ Last activity: 2026-05-20 — Milestone v2.1 (Grupo Robusto) entregue end-to-end
 - ✅ Lock atômico (`processing_locks` + `acquire/release/cleanup`)
 - ✅ Dedup universal (`send_text_uma_vez` + `OFERTA_ATIVA` + unique index conversas)
 - ✅ Slot-pick determinístico (build 2026-05-03 em prod)
+
+### v2.1 Validated (entregue 20/05) — NÃO REVERTER
+
+- ✅ Phase 3-4: Captura `@lid` via GROUP_PARTICIPANTS_UPDATE + MESSAGES_UPSERT (ac301fd, 6b0295b)
+- ✅ Phase 5: Endpoints admin `/admin/grupo/forcar-revalidacao` + `/admin/grupo/status` (207a3a9)
+- ✅ Phase 6: Alerta LEAD_LID + delay 180s (0e4c335)
+- ✅ Phase 7: qualificacao_lock multi-template antes de criar grupo (0717e1c)
+- ✅ Phase 8: Auth bridge JWT + Dashboard frontend `/admin/grupos` (8d9fe5c + f97686c)
+- ✅ Phase 9: Suite 13 testes pytest regressão (6159af5)
 
 ### Camadas defensivas grupo (18-19/05) — NÃO REVERTER
 
@@ -54,33 +51,45 @@ Last activity: 2026-05-20 — Milestone v2.1 (Grupo Robusto) entregue end-to-end
 - ✅ Whitelist `safety_net` 18/05: 23 motivos
 - ✅ Pipeline kanban Fase 3 18/05: colunas `agendamento_confirmado` + `no_show`
 
-### Infra existente (não reinventar)
+### Sessão 08-09/06 — 6 fixes paliativos (NÃO REVERTER, v2.2 substitui a base mas mantém estas camadas)
+
+- ✅ MIN_FLOOR_SEG 30s→180s (commit 53bd05a) — atrasa primeiro aquec pra Evolution propagar
+- ✅ Remove alerta grupo "lead não entrou" (commit 07d7341)
+- ✅ Marker GRUPO_LEAD_ENTROU_CRIACAO + bypass probe <5min (commit 96b72cc)
+- ✅ Valida acesso ao grupo antes de reusar (commit 7e366bd) — fix caso Fernanda
+- ✅ Recoveries startup async (commit ae2b141) — fix backend bloqueado 10+ min
+- ✅ Recovery aquec janela 6h (commit 0d55888) — fix caso Valquíria
+
+### Outros do dia 08/06
+
+- ✅ Reconexão instância Rejane (bia-rejane → rejane-leal-mentora, novo evolution_key 75818F69)
+- ✅ Migration RLS 003: processing_locks/convites_pendentes ENABLE + v_agendamentos_painel SECURITY INVOKER (commit 073c93f)
+
+### Infra existente (não reinventar em v2.2 — só ampliar)
 
 - `app/services/lock.py` — acquire/release/cleanup (v2.0)
-- `app/services/grupo_state.py` — FSM AGUARDANDO/FALLBACK_1_1/ATIVO + transition guards
+- `app/services/grupo_state.py` — FSM AGUARDANDO/FALLBACK_1_1/ATIVO + transition guards (v2.2 endurece)
 - `app/services/grupo_fallback.py:177` — `ativar_fallback_se_necessario` (entry point principal)
-- `app/services/qualificacao_lock.py` — `popular_qs_se_faltando` (Q1-Q3 + empatia sintéticas)
-- `app/routers/grupo_webhook.py` — `GROUP_PARTICIPANTS_UPDATE` handler
+- `app/services/qualificacao_lock.py` — `popular_qs_se_faltando`
+- `app/routers/grupo_webhook.py` — `GROUP_PARTICIPANTS_UPDATE` handler (v2.2 escreve em `grupo_membership`)
 - 23+ markers em `conversas` com unique constraint pra idempotência
 
-### Casos reais resolvidos por bugs anteriores (consultar memórias)
+### Casos reais resolvidos (consultar memórias)
 
-- Caca 03/05 (race condition mensagens consecutivas) → v2.0 Phase 1
-- Andressa 04/05 (LLM hallucina bullets sem tool) → v2.0 SLOTS-RESCUE
-- Luciane 11/05 (Evolution mentiu in_group=True) → Phase 7 FSM
-- Vanusa 13/05 (propagação 10-20s) → aquec floor 30s + DM convite delay 60s
-- Luciane 18/05 (FSM ATIVO herdado) → Fase 1 18/05 revalidação
-- Luciane 19/05 (notif #2 grupo vazio) → Fix ee132b9 sem bypass
-- Karla 20/05 (@lid removido = FALLBACK_1_1 errado) → Fase 3 v2.1 (esta milestone)
-- Patrícia 20/05 (Q1/Q2 dupla + persona switch + convite não chegou) → Fases 6+7 v2.1
+**v2.0/v2.1:**
+- Caca 03/05, Andressa 04/05, Luciane 11/05, Vanusa 13/05, Luciane 18-19/05, Karla 20/05, Patrícia 20/05
+
+**08/06 (motivadores v2.2):**
+- Ana Carla, Rosânia, Fernanda (grupo órfão), Valquíria (recovery 47h late), Rosângela (vídeo→texto erro user), 553891500357 (caso atual)
 
 ## Next Action
 
-1. Aprovar roadmap v2.1 (apresentado em conversa)
-2. `/gsd-plan-phase 3` — gera plano detalhado pra Fase 3 (validação + commit fix @lid base)
-3. Executar plano
-4. Mover pra Fase 4
+1. Spawn 4 researchers em paralelo (Stack/Features/Architecture/Pitfalls)
+2. Synthesize → SUMMARY.md
+3. Definir REQUIREMENTS.md v2.2
+4. Spawn roadmapper → ROADMAP.md (começa Fase 10)
+5. Aguardar aprovação user → `/gsd-plan-phase 10`
 
 ---
 
-*Last updated: 2026-05-20 — milestone v2.1 iniciado*
+*Last updated: 2026-06-09 — milestone v2.2 (Webhook-First) iniciado, research em curso*

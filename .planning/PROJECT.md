@@ -16,22 +16,25 @@ Lead preenche formulário externo → webhook cria lead no Leadflow → agente I
 
 **Operador (admin)** entra no frontend, vê leads/conversas em tempo real, configura prompt e horários, monitora pipeline, sem abrir outras ferramentas.
 
-## Current Milestone: v2.1 Grupo WhatsApp Robusto
+## Current Milestone: v2.2 Identificação Definitiva de Lead no Grupo (Webhook-First)
 
-**Goal:** Eliminar definitivamente bugs de detecção de lead no grupo WhatsApp, capturando `@lid` (Linked ID de privacidade) em múltiplas fontes e usando como chave alternativa ao telefone em todos os probes, preservando 100% das camadas defensivas já implementadas.
+**Goal:** Eliminar falsos negativos persistentes do probe Evolution invertendo a fonte da verdade — webhook `GROUP_PARTICIPANTS_UPDATE` torna-se primário via tabela materializada `grupo_membership`, probe Evolution vira fallback com retry exponencial + cache curto.
 
 **Target features:**
-- Captura `@lid` via webhook `GROUP_PARTICIPANTS_UPDATE` + heurística unique-aguardando (Fase 3 — parcial no workdir, 20/05)
-- Captura `@lid` via `MESSAGES_UPSERT` no grupo (defesa-em-profundidade — Fase 4)
-- Endpoint admin `/admin/grupo/forcar-revalidacao` (substitui SQL manual — Fase 5)
-- Audit + whitelist `ANTI_SPAM_LOOP` pra convite nativo (Fase 6)
-- Selar `qualificacao_lock` ANTES de criar grupo (corrige Q1/Q2 duplicada — Fase 7)
-- Dashboard admin `/admin/grupo/status?empresa_id=X` (observabilidade — Fase 8)
-- Suite testes regressão T1-T5 (Fase 9)
+- Tabela `grupo_membership` (grupo_jid, telefone, @lid, entrou_em, saiu_em) — fonte primária consultada antes do probe
+- Probe Evolution com retry exponencial (30s/2min/5min) — false negative inicial não conclui
+- Cache de resultado de probe (5min TTL) — evita bombardear API quando múltiplos jobs consultam mesmo grupo
+- Handler webhook LEAVE/REMOVE — lead que sai dispara notif via DM, FSM marca `LEFT_GROUP`
+- FSM transições estritamente monotônicas + audit log (`GRUPO_STATE_CHANGE:{from}:{to}:{reason}`)
+- Suite testes regressão pros 5 casos do dia 08/06 (Ana Carla, Rosânia, Fernanda, Valquíria, 553891500357)
 
-**Causa-raiz comprovada (sessão 2026-05-20):** WhatsApp esconde o telefone do lead como `@lid` (Linked ID) quando a privacidade é alta. Sem mapping bidirecional confiável `phone ↔ @lid`, `verificar_lead_no_grupo` retorna chute. Todos os bugs catalogados desde 04/05 (Gessiana, Luciane 11/05, Vanusa 13/05, Luciane 18-19/05, Karla 20/05, Patrícia 20/05) são manifestações dessa causa única — cada patch anterior foi um trade-off diferente entre falso positivo e falso negativo. Esta milestone elimina o trade-off ao tornar o `@lid` uma identidade persistida e match-able.
+**Causa-raiz reaberta (sessão 08-09/06):** v2.1 entregou captura `@lid` + endpoints admin + 13 testes. Casos Karla/Crislaine/Patrícia resolvidos. **Mas** v2.1 manteve probe Evolution como fonte primária com `@lid` como matcher alternativo. Quando Evolution mente ou demora (caso comum: 60-180s pra propagar membros), todos os patches caem. Os 6 fixes do dia 08/06 (floor 180s, sem alerta, valida reuso, recovery 6h, etc) são paliativos sobre a mesma base não-confiável. Esta milestone inverte: webhook é fonte primária, probe é backup com retry.
 
-**Histórico v2.0 (Agente IA Atomic Processing):** Phases 1-2 (Lock Atômico + Dedup Universal) foram shippadas ad-hoc em prod durante a sessão 06/05 (10 commits) e validadas. Phase 3 (OFERTA_ATIVA + slot-pick determinístico) também em prod. Phase 4 (Whisper) e suite testes T1-T8 ficam abertas pra próximo milestone se ressurgirem.
+**Histórico v2.1 (Grupo Robusto):** Fases 3-9 entregues (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 0717e1c, 8d9fe5c, f97686c, 6159af5). Suite 13 testes pytest commitada. Casos Karla/Crislaine/Patrícia resolvidos. Out-of-scope `leads.lid_whatsapp` mantido (marker em conversas) — v2.2 usa tabela dedicada `grupo_membership` em vez de coluna no leads.
+
+**Histórico v2.0 (Agente IA Atomic Processing):** Phases 1-2 (Lock Atômico + Dedup Universal) shippadas ad-hoc 06/05. Phase 3 (OFERTA_ATIVA + slot-pick determinístico) em prod. Phase 4 (Whisper) + T1-T8 reabertos se ressurgirem.
+
+**Sessão 08-09/06 — 6 fixes paliativos preservar (não reverter):** Floor 30s→180s (53bd05a), Remove alerta grupo (07d7341), Marker GRUPO_LEAD_ENTROU_CRIACAO + bypass probe < 5min (96b72cc), Grupo reuso valida acesso (7e366bd), Recoveries startup async (ae2b141), Recovery aquec janela 6h (0d55888). RLS hardening migration 003 (073c93f). Reconexão instância Rejane (bia-rejane→rejane-leal-mentora) sem commit.
 
 ## Requirements
 
@@ -73,34 +76,52 @@ Lead preenche formulário externo → webhook cria lead no Leadflow → agente I
 - ✓ Whitelist `safety_net` 18/05: 23 motivos (autoresposta WA Business etc)
 - ✓ Pipeline kanban Fase 3 18/05: colunas `agendamento_confirmado` + `no_show` com auto-move via D-1
 
-### Active (Milestone v2.1)
+### Validated (Milestone v2.1 — entregue 20/05)
 
-- [ ] **LID-01**: Webhook `GROUP_PARTICIPANTS_UPDATE` separa `@lid` de telefones limpos, grava marker `LEAD_LID:{grupo_jid}:{lid}` quando há exatamente 1 lead aguardando no grupo *(no workdir 20/05)*
-- [ ] **LID-02**: `verificar_lead_no_grupo` aceita parâmetro `lead_lid` e usa como matcher alternativo ao telefone no loop de participants *(no workdir 20/05)*
-- [ ] **LID-03**: Helper `_get_lead_lid_for_group(sb, empresa_id, telefone, grupo_jid)` lê marker mais recente; 7 callers threadeados (grupo_fallback.py 6x + confirmacao_agendamento.py 1x) *(no workdir 20/05)*
-- [ ] **LID-04**: Webhook agente captura `@lid` via `MESSAGES_UPSERT.data.key.participant` quando msg vem de grupo aguardando; promove FSM se exatamente 1 lead aguardando
-- [ ] **LID-05**: Backfill manual: leads existentes em FALLBACK_1_1 podem ser re-validados via endpoint admin
-- [ ] **ADMIN-01**: Endpoint `POST /admin/grupo/forcar-revalidacao { empresa_id, telefone, agendamento_id }` — re-probe + sincroniza FSM
-- [ ] **ADMIN-02**: Endpoint `GET /admin/grupo/status?empresa_id=X` — lista (lead, telefone, grupo_jid, FSM state, probe_live, has_lead_lid, tempo aguardando)
-- [ ] **SPAM-01**: Audit `ANTI_SPAM_LOOP:rate_alto` — mapear quais envios bloqueia (caso Patrícia 20/05: convite nativo card pode ter sido bloqueado)
-- [ ] **SPAM-02**: Whitelist `enviar_convite_grupo` no fluxo anti-spam — fluxo crítico de entrada não deve ser bloqueado
-- [ ] **QLOCK-01**: `popular_qs_se_faltando` chamada ANTES de `_criar_grupo_agendamento` retornar (leads.py + agente.py tool path) — fecha janela de race que permitiu Q1/Q2 dupla em Patrícia
-- [ ] **TEST-G1**: Caso lead entra com telefone limpo (sem `@lid`) → FSM=ATIVO via webhook
-- [ ] **TEST-G2**: Caso lead entra só com `@lid` → FSM=ATIVO via match `LEAD_LID`
-- [ ] **TEST-G3**: Caso lead nunca entra → FSM=FALLBACK_1_1 + DM convite + alerta grupo
-- [ ] **TEST-G4**: Caso 2 leads aguardando + `@lid` ambíguo → log, não-promove, aguarda próximo sinal
-- [ ] **TEST-G5**: Caso Patrícia regressão: Q1/Q2 não dispara 2x após `qualificacao_lock` selada
-- [ ] **DOC-G1**: Atualizar `agente_ia_fixes.md` / criar nota em memory com nova arquitetura
+- ✓ **LID-01..05**: Captura `@lid` via webhook GROUP_PARTICIPANTS_UPDATE + MESSAGES_UPSERT + helper `_get_lead_lid_for_group` + backfill manual (commits ac301fd, 6b0295b)
+- ✓ **ADMIN-01..02**: Endpoints `/admin/grupo/forcar-revalidacao` + `/admin/grupo/status` + auth bridge JWT (commits 207a3a9, 8d9fe5c)
+- ✓ **SPAM-01..02**: Whitelist `enviar_convite_grupo` em ANTI_SPAM_LOOP + delay 180s alerta (commit 0e4c335)
+- ✓ **QLOCK-01**: `qualificacao_lock` multi-template selada antes de criar grupo (commit 0717e1c)
+- ✓ **TEST-G1..G5 + DOC-G1**: 13 testes pytest commitados (suite regressão) + frontend dashboard `/admin/grupos` (commits f97686c + 6159af5)
 
-### Out of Scope (deste milestone)
+### Validated (Sessão 08/06 — 6 fixes paliativos do problema raiz que v2.2 vai resolver)
 
-- Coluna `leads.lid_whatsapp` (marker em conversas é suficiente, evita migration)
-- Endpoint Evolution alternativo (`checkNumberStatus`, `fetchProfile`) pra probe — `findGroupInfos` cobre se `@lid` mapped
-- Reescrita do FSM AGUARDANDO/FALLBACK_1_1/ATIVO — já funciona, só faltava o match
-- Cache de resultado de probe Evolution — taxa atual (~5-10/min) não exige
-- Reescrever ANTI_SPAM_LOOP detector — só whitelist o convite nativo
-- Multi-instance backend (segue out-of-scope do v2.0)
-- Eventos webhook Evolution adicionais (CONNECTION_UPDATE, CONTACTS_UPSERT) — só os 2 que já usamos
+- ✓ **AQUEC-FLOOR-01**: MIN_FLOOR_SEG aumentado 30s→180s pra Evolution propagar membros (commit 53bd05a)
+- ✓ **ALERTA-GRUPO-01**: Remove envio de alerta "lead não entrou" dentro do grupo (commit 07d7341)
+- ✓ **PROBE-BYPASS-01**: Marker `GRUPO_LEAD_ENTROU_CRIACAO` bypassa probe se <5min (commit 96b72cc)
+- ✓ **GRUPO-REUSO-01**: Valida acesso ao grupo antes de reusar (caso Fernanda, commit 7e366bd)
+- ✓ **RECOVERY-STARTUP-01**: Recoveries do startup async pra não bloquear Uvicorn (commit ae2b141)
+- ✓ **RECOVERY-AQUEC-01**: Recovery aquec descarta items pendentes >6h do START (commit 0d55888)
+- ✓ **RLS-HARD-01**: Migration 003 — RLS em processing_locks/convites_pendentes + SECURITY INVOKER em v_agendamentos_painel (commit 073c93f)
+
+### Active (Milestone v2.2 — Webhook-First)
+
+- [ ] **MEMB-01**: Migration `grupo_membership` (grupo_jid, telefone, lid, entrou_em, saiu_em, criado_em, atualizado_em) + indexes
+- [ ] **MEMB-02**: Webhook GROUP_PARTICIPANTS_UPDATE escreve row em `grupo_membership` (UPSERT por grupo_jid+telefone), eventos ADD/REMOVE
+- [ ] **MEMB-03**: Webhook MESSAGES_UPSERT (msg do lead no grupo) UPSERT em `grupo_membership` quando match @lid + grupo aguardando
+- [ ] **MEMB-04**: Função `lead_in_group(empresa_id, telefone, grupo_jid)` consulta `grupo_membership` PRIMEIRO; só vai pro probe Evolution se row ausente OU saiu_em != null
+- [ ] **PROBE-RETRY-01**: `verificar_lead_no_grupo` ganha modo `retry_async=True` que enfileira retry em 30s/2min/5min via APScheduler antes de concluir negativo definitivo
+- [ ] **PROBE-CACHE-01**: Cache em memória (TTL 5min) por chave `(grupo_jid, telefone, lid)` — múltiplos callers no mesmo job dispatch compartilham resultado
+- [ ] **LEAVE-01**: Handler webhook REMOVE marca `grupo_membership.saiu_em` + insere marker `LEAD_SAIU_GRUPO:{jid}` em conversas
+- [ ] **LEAVE-02**: Notif pré-reunião e D-1 detectam `saiu_em != null` E vai pro DM (não grupo vazio)
+- [ ] **FSM-AUDIT-01**: `set_grupo_state` valida transição estritamente monotônica (AGUARDANDO→ATIVO ok; ATIVO→AGUARDANDO BLOQUEADO sem flag de override)
+- [ ] **FSM-AUDIT-02**: Toda transição grava `GRUPO_STATE_CHANGE:{from}:{to}:{reason}:{caller}` em conversas (audit log)
+- [ ] **TEST-V2-G1**: Caso Ana Carla 08/06 — lead adicionado direto em createGroup, FSM=ATIVO em <60s sem precisar probe live
+- [ ] **TEST-V2-G2**: Caso Rosânia 08/06 — webhook GROUP_PARTICIPANTS_UPDATE chega T+138s, sistema espera (probe retry) em vez de cair pro DM
+- [ ] **TEST-V2-G3**: Caso Fernanda 07/06 — grupo órfão de instância antiga detectado em `lead_in_group` E novo grupo criado automático
+- [ ] **TEST-V2-G4**: Caso Valquíria 06/06 — aquec recovery não dispara item velho (cobertura adicional ao RECOVERY-AQUEC-01)
+- [ ] **TEST-V2-G5**: Caso 553891500357 09/06 — reprodução completa (passo a passo do incidente)
+- [ ] **DOC-V2-G1**: Atualizar `agente_ia_fixes.md` + criar `grupo_membership_arquitetura.md` em memory
+
+### Out of Scope (milestone v2.2)
+
+- Coluna `leads.lid_whatsapp` (tabela dedicada `grupo_membership` substitui — relação N:N lead × grupo)
+- Reescrita do FSM AGUARDANDO/FALLBACK_1_1/ATIVO — só endurecer transições + audit log
+- Multi-instance backend (segue out-of-scope do v2.0/v2.1)
+- Redis pra cache de probe — in-memory é suficiente (single-worker no Easypanel)
+- Eventos webhook Evolution adicionais além de GROUP_PARTICIPANTS_UPDATE, MESSAGES_UPSERT, CONNECTION_UPDATE, MESSAGES_UPDATE (já usados)
+- Reescrita do probe Evolution em si — só adicionar retry+cache em volta
+- Backfill retroativo de `grupo_membership` pra grupos antigos — só registra a partir do deploy (grupos antigos seguem com markers atuais)
 
 ## Context
 
@@ -140,18 +161,30 @@ Detalhes em `c:/Projetos/Leadflow/ANALISE_DETALHADA_DEFEITOS.md` (11 defeitos, c
 | OFERTA_ATIVA window de 2min | Lead que demora pra responder não gera 2 ofertas | ✓ shippado 06/05 |
 | Não migrar pra Redis | Postgres handle 1 worker single-instance bem | ✓ validado em prod |
 
-### v2.1 (Grupo Robusto)
+### v2.1 (Grupo Robusto — entregue 20/05)
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| `@lid` persistido como marker `LEAD_LID` em conversas (não coluna em leads) | Reusa tabela + unique constraint pra idempotência; evita migration | — Pending |
-| Probe Evolution aceita `lead_lid` opcional como matcher alternativo | Mantém backwards compat; callers gradualmente passam o lid | — Pending |
-| Captura `@lid` em 2 fontes paralelas (`GROUP_PARTICIPANTS_UPDATE` + `MESSAGES_UPSERT`) | Defesa-em-profundidade: webhook de grupo pode não disparar, msg do lead no grupo é evento garantido | — Pending |
-| Heurística unique-aguardando pra correlacionar `@lid` ↔ telefone | Quando >1 lead aguardando no mesmo grupo, ignora (log) e aguarda próximo sinal | — Pending |
-| Endpoint admin pra forçar revalidação em vez de SQL manual | Substitui workflow Karla 20/05; operador opera via frontend | — Pending |
-| Whitelist `enviar_convite_grupo` em ANTI_SPAM_LOOP | Convite de entrada é fluxo crítico, não spam | — Pending |
-| `qualificacao_lock` selada ANTES da criação do grupo | Fecha janela de race que permitiu Q1/Q2 dupla em Patrícia | — Pending |
-| Continua phase numbering (Fase 3-9) — não reseta | v2.0 terminou em Fase 2, timeline contínua é mais fácil de rastrear | — Decidido |
+| `@lid` persistido como marker `LEAD_LID` em conversas (não coluna em leads) | Reusa tabela + unique constraint pra idempotência; evita migration | ✓ shippado |
+| Probe Evolution aceita `lead_lid` opcional como matcher alternativo | Mantém backwards compat; callers gradualmente passam o lid | ✓ shippado |
+| Captura `@lid` em 2 fontes paralelas (`GROUP_PARTICIPANTS_UPDATE` + `MESSAGES_UPSERT`) | Defesa-em-profundidade: webhook de grupo pode não disparar, msg do lead no grupo é evento garantido | ✓ shippado |
+| Heurística unique-aguardando pra correlacionar `@lid` ↔ telefone | Quando >1 lead aguardando no mesmo grupo, ignora (log) e aguarda próximo sinal | ✓ shippado |
+| Endpoint admin pra forçar revalidação em vez de SQL manual | Substitui workflow Karla 20/05; operador opera via frontend | ✓ shippado |
+| Whitelist `enviar_convite_grupo` em ANTI_SPAM_LOOP | Convite de entrada é fluxo crítico, não spam | ✓ shippado |
+| `qualificacao_lock` selada ANTES da criação do grupo | Fecha janela de race que permitiu Q1/Q2 dupla em Patrícia | ✓ shippado |
+| Continua phase numbering (Fase 3-9) — não reseta | v2.0 terminou em Fase 2, timeline contínua é mais fácil de rastrear | ✓ aplicado |
+
+### v2.2 (Webhook-First — em definição)
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Tabela dedicada `grupo_membership` em vez de marker em conversas | Relação N:N (lead × grupo), queries por grupo_jid eficientes, suporta REMOVE/saiu_em explícito | — Decidido (user 09/06) |
+| Webhook = fonte primária, probe = fallback | v2.1 manteve probe como primário e falhou em 4+ casos do 08/06. Inversão é única forma de eliminar falso negativo | — Decidido (escopo aprovado) |
+| Probe com retry exponencial (30s/2min/5min) async via APScheduler | Probe síncrono não dá tempo pra Evolution propagar — retry assíncrono espera + reverifica sem bloquear | — Pending |
+| Cache in-memory 5min TTL (não Redis) | Single-worker Easypanel; 5-10 probes/min de pico; in-memory suficiente | — Pending |
+| FSM transições estritamente monotônicas + audit log | Endurece estado contra regressão acidental; rastreabilidade pra debug | — Pending |
+| Continua phase numbering — v2.2 começa em Fase 10 | v2.1 terminou em Fase 9, timeline contínua mais fácil de rastrear | — Decidido |
+| Sem backfill retroativo de `grupo_membership` | Grupos antigos seguem com markers atuais (não vale custo de migration de dados) | — Decidido |
 
 ## Evolution
 
@@ -171,4 +204,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 — v2.0 phases shippadas ad-hoc validadas, milestone v2.1 (Grupo Robusto) iniciado*
+*Last updated: 2026-06-09 — v2.1 (Grupo Robusto) entregue 20/05; milestone v2.2 (Webhook-First) iniciado após 6 fixes paliativos do dia 08/06 não cobrirem casos persistentes (553891500357 + 4 do 08/06)*
