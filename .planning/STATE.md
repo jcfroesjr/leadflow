@@ -1,11 +1,26 @@
+---
+gsd_state_version: 1.0
+milestone: v2.2
+milestone_name: — Webhook-First Grupo Membership
+status: executing
+last_updated: "2026-06-09T18:06:47.388Z"
+last_activity: 2026-06-09 -- Phase 10 planning complete
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 0
+  percent: 0
+---
+
 # Project State
 
 ## Current Position
 
 Phase: 10 (next)
 Plan: TBD
-Status: Roadmap v2.2 aprovado — pronto para `/gsd-plan-phase 10`
-Last activity: 2026-06-09 — Roadmap v2.2 criado (Fases 10-14)
+Status: Ready to execute
+Last activity: 2026-06-09 -- Phase 10 planning complete
 
 ## Active Milestone
 
@@ -96,9 +111,11 @@ Last activity: 2026-06-09 — Roadmap v2.2 criado (Fases 10-14)
 ### Casos reais resolvidos (consultar memorias)
 
 **v2.0/v2.1:**
+
 - Caca 03/05, Andressa 04/05, Luciane 11/05, Vanusa 13/05, Luciane 18-19/05, Karla 20/05, Patricia 20/05
 
 **08/06 (motivadores v2.2 — em escopo):**
+
 - Ana Carla, Rosania, Fernanda (grupo orfao), Valquiria (recovery 47h late), Rosangela (video->texto erro user), 553891500357 (caso atual)
 
 ## Decisions Log v2.2
@@ -135,6 +152,7 @@ Last activity: 2026-06-09 — Roadmap v2.2 criado (Fases 10-14)
 ## Session Continuity
 
 **Para retomar de outra sessao:**
+
 - ROADMAP.md tem todas as 5 fases v2.2 com success criteria observaveis
 - REQUIREMENTS.md tem traceability MEMB-* / PROBE-* / LEAVE-* / FSM-AUDIT-* / TEST-V2-* / DOC-V2-* / OBS-V2-* mapeados
 - research/ tem SUMMARY + STACK + FEATURES + ARCHITECTURE + PITFALLS (consultar antes de mexer em codigo)

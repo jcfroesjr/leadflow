@@ -85,10 +85,10 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 - [ ] **MEMB-05**: Funcao `lead_in_group(sb, empresa_id, telefone, grupo_jid, lid="") -> dict {in_group, source, last_event_at, instance_key_match}` consulta `grupo_membership` PRIMEIRO; so vai pro probe Evolution se row ausente OU saiu_em != null
 - [ ] **MEMB-06**: Query filtra `WHERE instance_key = empresa.evolution_key_atual` — rows de instancia antiga (Fernanda) NAO contam
 
-### Cat 2: PROBE FALLBACK COM RETRY + CACHE (Fase 11-12)
+### Cat 2: PROBE FALLBACK COM RETRY + CACHE (Fases 10-12)
 
-- [ ] **PROBE-CACHE-01**: Singleton `app/services/probe_cache.py` com `cachetools.TTLCache(maxsize=512, ttl=300)` + `RLock`; chave `(empresa_id, grupo_jid, telefone, lid)`; invalidacao automatica em todo UPSERT de `grupo_membership` via helper centralizado
-- [ ] **PROBE-COALESCE-01**: `asyncio.Lock` por chave evita 3 jobs probando o mesmo grupo simultaneamente (caso comum quando aquec+notif+timeout disparam na mesma janela)
+- [ ] **PROBE-CACHE-01** (Fase 10): Singleton `app/services/probe_cache.py` com `cachetools.TTLCache(maxsize=512, ttl=300)` + `RLock`; chave `(empresa_id, grupo_jid, telefone, lid)`; invalidacao automatica em todo UPSERT de `grupo_membership` via helper centralizado
+- [ ] **PROBE-COALESCE-01** (Fase 11 — movido da Fase 10 em 09/06 pos plan-checker): `asyncio.Lock` por chave evita 3 jobs probando o mesmo grupo simultaneamente. Materializa junto do consumer `lead_in_group()` que dispara os probes concorrentes.
 - [ ] **PROBE-RETRY-01**: Funcao `schedule_probe_retry(empresa_id, grupo_jid, telefone, lid, attempts_left=3, max_age_seconds=600)` — job APScheduler one-shot `trigger='date'`. Tentativas em 30s/2min/5min. **`max_age_seconds` absoluto** descarta job se janela passou (cobre Rosania + Valquiria).
 - [ ] **PROBE-RETRY-02**: Migrar callers com margem temporal (notif pre-reuniao, timeout 30min FALLBACK) pra usar retry async em vez de probe sincrono. Aquec mantem sincrono mas consulta `grupo_membership` primeiro.
 
@@ -170,8 +170,8 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 | MEMB-04 | Fase 10 | TBD | Pending |
 | MEMB-06 | Fase 10 | TBD | Pending |
 | PROBE-CACHE-01 | Fase 10 | TBD | Pending |
-| PROBE-COALESCE-01 | Fase 10 | TBD | Pending |
 | MEMB-05 | Fase 11 | TBD | Pending |
+| PROBE-COALESCE-01 | Fase 11 (movido da 10 em 09/06) | TBD | Pending |
 | (migracao 6 callsites grupo_fallback.py) | Fase 11 | TBD | Pending |
 | PROBE-RETRY-01 | Fase 12 | TBD | Pending |
 | PROBE-RETRY-02 | Fase 12 | TBD | Pending |

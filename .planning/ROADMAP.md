@@ -96,8 +96,8 @@ Casos Karla, Crislaine, Patricia resolvidos. NAO REVERTER.
 
 v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta).
 
-- [ ] **Phase 10: Schema + 3 paths webhook write + cache standalone** - Tabela `grupo_membership` com `instance_key` + UPSERT em 3 paths (webhook ADD, MESSAGES_UPSERT, createGroup direct) + cache singleton com coalescing
-- [ ] **Phase 11: `lead_in_group()` consumer + migrar fallback callers** - Funcao central de leitura tabela-primeira + migra 6 callsites de `verificar_lead_no_grupo` em `grupo_fallback.py`
+- [ ] **Phase 10: Schema + 3 paths webhook write + cache standalone** - Tabela `grupo_membership` com `instance_key` + UPSERT em 3 paths (webhook ADD, MESSAGES_UPSERT, createGroup direct) + cache singleton (coalescing movido pra Fase 11)
+- [ ] **Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async** - Funcao central de leitura tabela-primeira + migra 6 callsites + asyncio.Lock coalescing
 - [ ] **Phase 12: Retry async + callers com margem** - APScheduler retry exponencial 30s/2min/5min com `max_age_seconds=600` absoluto + migra callers com margem temporal
 - [ ] **Phase 13: LEAVE handler + FSM audit monotonico** - Webhook REMOVE marca `saiu_em` + notif DM-first + transicoes estritamente monotonicas + audit log com `caller` obrigatorio
 - [ ] **Phase 14: Testes regressao + doc + observabilidade** - Suite pytest 5 casos motivadores + memorias + healthcheck endpoint
@@ -105,28 +105,33 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
 ## Phase Details
 
 ### Phase 10: Schema + 3 paths webhook write + cache standalone
-**Goal**: Fundacao webhook-first. Tabela `grupo_membership` populada em tempo real via 3 paths independentes garante que `lead_in_group()` (Fase 11) ja encontre dados confiaveis ao consultar. Cache + coalescing standalone reduz pressao em Evolution sem mudar callers existentes ainda.
+**Goal**: Fundacao webhook-first. Tabela `grupo_membership` populada em tempo real via 3 paths independentes garante que `lead_in_group()` (Fase 11) ja encontre dados confiaveis ao consultar. Cache standalone reduz pressao em Evolution sem mudar callers existentes ainda. **Coalescing async movido pra Fase 11** (materializa com consumer).
 **Depends on**: Nothing (primeira fase v2.2 — fundacao)
-**Requirements**: MEMB-01, MEMB-02, MEMB-03, MEMB-04, MEMB-06, PROBE-CACHE-01, PROBE-COALESCE-01
+**Requirements**: MEMB-01, MEMB-02, MEMB-03, MEMB-04, MEMB-06, PROBE-CACHE-01
 **Success Criteria** (what must be TRUE):
   1. Lead que entra via `POST /group/create` tem row em `grupo_membership` em <1s sem aguardar webhook (Path 3 — caso Ana Carla resolvido na fundacao)
   2. Tabela `grupo_membership` tem coluna `instance_key` populada em todos os writes; query por instancia antiga retorna vazio quando empresa migrou (caso Fernanda nao regride)
   3. Webhook `GROUP_PARTICIPANTS_UPDATE action=add` faz UPSERT idempotente comparando `messageTimestamp` do payload (re-delivery nao duplica linha; out-of-order respeitado)
-  4. Cache singleton `cachetools.TTLCache(maxsize=512, ttl=300)` retorna >80% hit rate quando aquec+notif+timeout consultam o mesmo grupo na mesma janela de 5min
-  5. `asyncio.Lock` por chave evita probe em paralelo: 3 jobs concorrentes pro mesmo grupo disparam 1 unica chamada HTTP Evolution
-  6. RLS service_role-only ativo desde o deploy inicial — INSERT via anon key retorna 0 rows (verificavel via teste)
-**Plans**: TBD
+  4. Cache singleton `cachetools.TTLCache(maxsize=512, ttl=300)` + write-through invalidate em todo UPSERT (Pitfall 2: cache mascarando falha de persistencia eliminado)
+  5. RLS service_role-only ativo desde o deploy inicial — INSERT via anon key retorna 0 rows (verificavel via teste)
+**Plans**: 5 plans
+- [ ] 10-01-PLAN.md — Wave 0 pre-deps: confirmar cachetools + localizar Path 2 callsite + parse messageTimestamp shape
+- [ ] 10-02-PLAN.md — Wave 1 foundation: migration 004 (tabela + RLS + RPC) + helper upsert_grupo_membership + cache singleton
+- [ ] 10-03-PLAN.md — Wave 2 Path 1: webhook GROUP_PARTICIPANTS_UPDATE add → UPSERT em grupo_membership
+- [ ] 10-04-PLAN.md — Wave 2 Paths 2+3: MESSAGES_UPSERT @lid capture + createGroup direct write (caso Ana Carla)
+- [ ] 10-05-PLAN.md — Wave 3 tests + healthcheck skinny + BUILD_VERSION bump + smoke RLS manual
 
-### Phase 11: `lead_in_group()` consumer + migrar fallback callers
-**Goal**: Inverter fonte da verdade nos callers criticos. Funcao central `lead_in_group()` consulta `grupo_membership` PRIMEIRO; probe Evolution so roda como fallback. Migra os 6 callsites de `verificar_lead_no_grupo` em `grupo_fallback.py` (linhas 251, 311, 337, 477, 624, 1173, 1256) para usar o novo consumer.
+### Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async
+**Goal**: Inverter fonte da verdade nos callers criticos. Funcao central `lead_in_group()` consulta `grupo_membership` PRIMEIRO; probe Evolution so roda como fallback. Migra os 6 callsites de `verificar_lead_no_grupo` em `grupo_fallback.py` (linhas 251, 311, 337, 477, 624, 1173, 1256) para usar o novo consumer. Coalescing async via `asyncio.Lock` por chave materializa AQUI (movido da Fase 10), junto do consumer que dispara probes concorrentes.
 **Depends on**: Phase 10 (tabela + writes funcionando)
-**Requirements**: MEMB-05
+**Requirements**: MEMB-05, PROBE-COALESCE-01
 **Success Criteria** (what must be TRUE):
   1. `lead_in_group(empresa_id, telefone, grupo_jid, lid)` retorna `{in_group, source, last_event_at, instance_key_match}` consultando `grupo_membership` PRIMEIRO; so vai pro probe se row ausente OU `saiu_em != null`
   2. Janela stale: se grupo criado <6min atras E sem row, fallback retorna `pending` (nao concluivo) em vez de False — permite Fase 12 enfileirar retry
   3. Os 6 callsites em `grupo_fallback.py` chamam `lead_in_group()` em vez de `verificar_lead_no_grupo` direto; probe direto so permanece em endpoint admin para diagnostico
   4. Quando `instance_key_match=False`, funcao trata como grupo orfao (caso Fernanda) e retorna sentinel que permite ao caller decidir criar novo grupo
-  5. Logs `[MEMB-LOOKUP] source={membership|cache|probe|stale} grupo={jid} verdict={...}` aparecem em todas as consultas
+  5. `asyncio.Lock` por chave evita probe concorrente: 3 jobs paralelos pro mesmo grupo disparam 1 unica chamada HTTP Evolution (PROBE-COALESCE-01)
+  6. Logs `[MEMB-LOOKUP] source={membership|cache|probe|stale} grupo={jid} verdict={...}` aparecem em todas as consultas
 **Plans**: TBD
 
 ### Phase 12: Retry async + callers com margem
@@ -176,7 +181,7 @@ Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. Schema + 3 paths webhook write + cache standalone | 0/TBD | Not started | - |
+| 10. Schema + 3 paths webhook write + cache standalone | 0/5 | Planned | - |
 | 11. `lead_in_group()` consumer + migrar fallback callers | 0/TBD | Not started | - |
 | 12. Retry async + callers com margem | 0/TBD | Not started | - |
 | 13. LEAVE handler + FSM audit monotonico | 0/TBD | Not started | - |
