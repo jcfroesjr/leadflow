@@ -136,7 +136,7 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
 **Plans**: 4 plans
 - [x] 11-01-PLAN.md — Wave 1 foundation: lead_in_group() consumer + decision tree + asyncio.Lock coalescing per-chave em grupo_membership.py
 - [x] 11-02-PLAN.md — Wave 2 migracao: 7 substituicoes mecanicas em grupo_fallback.py (linhas 251/311/337/477/624/1173/1256) preservando PROBE-BYPASS-01 + ALERTA-GRUPO-01
-- [ ] 11-03-PLAN.md — Wave 3 tests: 7 testes decision tree + 3 testes coalescing + 8 testes CI grep migration
+- [x] 11-03-PLAN.md — Wave 3 tests: 7 testes decision tree + 3 testes coalescing + 8 testes CI grep migration
 - [ ] 11-04-PLAN.md — Wave 4 deploy: BUILD_VERSION bump + healthcheck endpoint estendido + smoke prod (CHECKPOINT)
 
 ### Phase 12: Retry async + callers com margem
@@ -187,7 +187,7 @@ Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 10. Schema + 3 paths webhook write + cache standalone | 5/5 | Complete    | 2026-06-09 |
-| 11. `lead_in_group()` consumer + migrar fallback callers | 2/4 | In Progress|  |
+| 11. `lead_in_group()` consumer + migrar fallback callers | 3/4 | In Progress|  |
 | 12. Retry async + callers com margem | 0/TBD | Not started | - |
 | 13. LEAVE handler + FSM audit monotonico | 0/TBD | Not started | - |
 | 14. Testes regressao + doc + observabilidade | 0/TBD | Not started | - |

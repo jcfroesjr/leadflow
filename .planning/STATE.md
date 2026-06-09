@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: — Webhook-First Grupo Membership
 status: executing
-last_updated: "2026-06-09T22:28:55.254Z"
+last_updated: "2026-06-09T23:08:30.918Z"
 last_activity: 2026-06-09
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 7
-  percent: 78
+  completed_plans: 8
+  percent: 89
 ---
 
 # Project State
@@ -18,7 +18,7 @@ progress:
 ## Current Position
 
 Phase: 11 (lead-in-group-consumer-migrar-fallback-callers-coalescing-async) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-09
 
@@ -57,6 +57,7 @@ Last activity: 2026-06-09
 | Nao regredir fixes 08/06 | 6/6 | 6/6 (todos mantidos ativos) |
 | Nova dependencia stack | <2 | 1 (`cachetools>=5.5.0`) |
 | Phase 11 P11-02 | 25 | 4 tasks | 1 files |
+| Phase 11 P03 | 45 | 4 tasks | 4 files |
 
 ## Accumulated Context (preservado entre milestones)
 
