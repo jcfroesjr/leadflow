@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: — Webhook-First Grupo Membership
 status: executing
-last_updated: "2026-06-10T02:37:54.125Z"
+last_updated: "2026-06-10T02:54:55.407Z"
 last_activity: 2026-06-10
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 16
-  completed_plans: 13
-  percent: 81
+  completed_plans: 14
+  percent: 88
 ---
 
 # Project State
@@ -18,9 +18,9 @@ progress:
 ## Current Position
 
 Phase: 13 (LEAVE handler + FSM audit monotonico) — EXECUTING
-Plan: 2 of 4
-Status: Executing Phase 13 — Plan 01 complete, Plan 02 next
-Last activity: 2026-06-10 -- 13-01 complete: FSM monotonic guard + GSC audit + LEFT_GROUP
+Plan: 3 of 4
+Status: Ready to execute
+Last activity: 2026-06-10
 
 ## Active Milestone
 
@@ -63,6 +63,7 @@ Last activity: 2026-06-10 -- 13-01 complete: FSM monotonic guard + GSC audit + L
 | Phase 12 P12-02 | 10 | 3 tasks | 4 files |
 | Phase 12-retry-async-callers-com-margem P03 | 8min | 3 tasks | 1 files |
 | Phase 13 P01 | 7 | 2 tasks | 2 files |
+| Phase 13-leave-handler-fsm-audit-monotonico P02 | 25 | 3 tasks | 4 files |
 
 ## Accumulated Context (preservado entre milestones)
 

@@ -94,9 +94,9 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 
 ### Cat 3: LEAVE HANDLER (Fase 13)
 
-- [ ] **LEAVE-01**: Webhook `GROUP_PARTICIPANTS_UPDATE action="remove"` marca `grupo_membership.saiu_em = messageTimestamp` + insere marker `LEAD_SAIU_GRUPO:{grupo_jid}` em conversas (sem `{ts}` — timestamp ja persiste em `saiu_em`; idempotencia via guard `saiu_em IS NULL` no UPDATE) [amenda 2026-06-09 pos plan-check]
-- [ ] **LEAVE-02**: Notif pre-reuniao + D-1 detectam `saiu_em != null` na `lead_in_group()` E redirecionam pro DM (nao pra grupo vazio)
-- [ ] **LEAVE-03**: FSM de grupo do lead que saiu vai pra `LEFT_GROUP` (novo estado terminal naquele agendamento; marker GSC carrega flag LEFT_GROUP pra diferenciar de timeout normal) [amenda 2026-06-09: LEFT_GROUP terminal em vez de FALLBACK_1_1, decisao do usuario, alinha com SC6]
+- [x] **LEAVE-01**: Webhook `GROUP_PARTICIPANTS_UPDATE action="remove"` marca `grupo_membership.saiu_em = messageTimestamp` + insere marker `LEAD_SAIU_GRUPO:{grupo_jid}` em conversas (sem `{ts}` — timestamp ja persiste em `saiu_em`; idempotencia via guard `saiu_em IS NULL` no UPDATE) [amenda 2026-06-09 pos plan-check]
+- [x] **LEAVE-02**: Notif pre-reuniao + D-1 detectam `saiu_em != null` na `lead_in_group()` E redirecionam pro DM (nao pra grupo vazio)
+- [x] **LEAVE-03**: FSM de grupo do lead que saiu vai pra `LEFT_GROUP` (novo estado terminal naquele agendamento; marker GSC carrega flag LEFT_GROUP pra diferenciar de timeout normal) [amenda 2026-06-09: LEFT_GROUP terminal em vez de FALLBACK_1_1, decisao do usuario, alinha com SC6]
 
 ### Cat 4: FSM MONOTONICO + AUDIT LOG (Fase 13)
 
