@@ -100,7 +100,7 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
  (completed 2026-06-09)
 - [x] **Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async** - Funcao central de leitura tabela-primeira + migra 6 callsites + asyncio.Lock coalescing
  (completed 2026-06-09)
-- [ ] **Phase 12: Retry async + callers com margem** - APScheduler retry exponencial 30s/2min/5min com `max_age_seconds=600` absoluto + migra callers com margem temporal
+- [x] **Phase 12: Retry async + callers com margem** - APScheduler retry exponencial 30s/2min/5min com `max_age_seconds=600` absoluto + migra callers com margem temporal (completed 2026-06-10)
 - [ ] **Phase 13: LEAVE handler + FSM audit monotonico** - Webhook REMOVE marca `saiu_em` + notif DM-first + transicoes estritamente monotonicas + audit log com `caller` obrigatorio
 - [ ] **Phase 14: Testes regressao + doc + observabilidade** - Suite pytest 5 casos motivadores + memorias + healthcheck endpoint
 
@@ -154,7 +154,7 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
 **Plans**: 3 plans
 - [x] 12-01-PLAN.md — Wave 1: schedule_probe_retry() + _probe_retry_job() (max_age guard + table-first) + ativacao stub no STEP 5 de lead_in_group (PROBE-RETRY-01)
 - [x] 12-02-PLAN.md — Wave 2: migra 2 callers com margem (confirmacao D-1 + notif warmup) + recovery startup; aquec mantem sincrono (PROBE-RETRY-02)
-- [ ] 12-03-PLAN.md — Wave 3: suite pytest test_probe_retry.py (Validation Architecture: scheduling, max_age Valquiria, table-first Rosania, callers)
+- [x] 12-03-PLAN.md — Wave 3: suite pytest test_probe_retry.py (Validation Architecture: scheduling, max_age Valquiria, table-first Rosania, callers)
 
 ### Phase 13: LEAVE handler + FSM audit monotonico
 **Goal**: Fechar o ciclo de vida da membership. Webhook REMOVE marca `saiu_em` + insere marker `LEAD_SAIU_GRUPO`. Notif pre-reuniao e D-1 detectam `saiu_em != null` e redirecionam pro DM (nao grupo vazio). FSM transicoes estritamente monotonicas com argumento `caller` obrigatorio sem default — toda transicao gera audit log `GRUPO_STATE_CHANGE:{from}:{to}:{reason}:{caller}` em conversas.
@@ -192,7 +192,7 @@ Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
 |-------|----------------|--------|-----------|
 | 10. Schema + 3 paths webhook write + cache standalone | 5/5 | Complete    | 2026-06-09 |
 | 11. `lead_in_group()` consumer + migrar fallback callers | 4/4 | Complete    | 2026-06-09 |
-| 12. Retry async + callers com margem | 2/3 | In Progress|  |
+| 12. Retry async + callers com margem | 3/3 | Complete   | 2026-06-10 |
 | 13. LEAVE handler + FSM audit monotonico | 0/TBD | Not started | - |
 | 14. Testes regressao + doc + observabilidade | 0/TBD | Not started | - |
 
