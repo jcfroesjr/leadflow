@@ -3,24 +3,24 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: — Webhook-First Grupo Membership
 status: executing
-last_updated: "2026-06-10T02:25:42.447Z"
-last_activity: 2026-06-10 -- Phase 13 planning complete
+last_updated: "2026-06-10T02:37:54.125Z"
+last_activity: 2026-06-10
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 16
-  completed_plans: 12
-  percent: 75
+  completed_plans: 13
+  percent: 81
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-10 -- Phase 13 planning complete
+Phase: 13 (LEAVE handler + FSM audit monotonico) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 13 — Plan 01 complete, Plan 02 next
+Last activity: 2026-06-10 -- 13-01 complete: FSM monotonic guard + GSC audit + LEFT_GROUP
 
 ## Active Milestone
 
@@ -62,6 +62,7 @@ Last activity: 2026-06-10 -- Phase 13 planning complete
 | Phase 12 P01 | 5 | 3 tasks | 1 files |
 | Phase 12 P12-02 | 10 | 3 tasks | 4 files |
 | Phase 12-retry-async-callers-com-margem P03 | 8min | 3 tasks | 1 files |
+| Phase 13 P01 | 7 | 2 tasks | 2 files |
 
 ## Accumulated Context (preservado entre milestones)
 
@@ -136,6 +137,9 @@ Last activity: 2026-06-10 -- Phase 13 planning complete
 | 3 paths de escrita (webhook ADD + MESSAGES_UPSERT + createGroup direct) | Caso Ana Carla repete sem Path 3 | 2026-06-09 |
 | Cache in-memory `cachetools.TTLCache` (nao Redis) | Single-worker Easypanel; 5-10 probes/min; in-memory suficiente | 2026-06-09 |
 | FSM `caller` argumento obrigatorio sem default | CI grep check garante audit completo | 2026-06-09 |
+| GSC: prefix (not GRUPO_STATE_CHANGE:) para audit marker | Evita colisao com .like("GRUPO_STATE:%") em get_grupo_state | 2026-06-10 |
+| LEFT_GROUP e estado terminal real (nao FALLBACK_1_1) | Lead saiu nao e fallback — e estado definitivo; monotonia exige terminal | 2026-06-10 |
+| set_grupo_state escreve 2 markers: legacy GRUPO_STATE: + GSC: audit | Backward compat com get_grupo_state + audit trail completo | 2026-06-10 |
 | Continua phase numbering — v2.2 comeca em Fase 10 | v2.1 terminou em Fase 9, timeline continua mais facil de rastrear | 2026-06-09 |
 | Sem backfill retroativo de `grupo_membership` | Grupos antigos seguem com markers atuais | 2026-06-09 |
 | TEST-V2-G5 (553891500357) marcado `blocked-pending-data` | User precisa fornecer trace completo do incidente | 2026-06-09 |

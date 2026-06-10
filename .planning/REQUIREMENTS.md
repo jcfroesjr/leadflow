@@ -100,8 +100,8 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 
 ### Cat 4: FSM MONOTONICO + AUDIT LOG (Fase 13)
 
-- [ ] **FSM-AUDIT-01**: `set_grupo_state()` valida transicao estritamente monotonica: `AGUARDANDO->FALLBACK_1_1->ATIVO` e ok; `ATIVO->AGUARDANDO` BLOQUEADO sem flag `force=True` (so endpoint admin pode forcar)
-- [ ] **FSM-AUDIT-02**: Toda transicao grava marker `GSC:{ag_id}:{from}:{to}:{reason}:{caller}` em conversas; argumento `caller` e obrigatorio sem default [amenda 2026-06-09: prefixo `GSC:` em vez de `GRUPO_STATE_CHANGE:` — este ultimo colide com `.like("GRUPO_STATE:%")` do get_grupo_state e corromperia o parser de estado]
+- [x] **FSM-AUDIT-01**: `set_grupo_state()` valida transicao estritamente monotonica: `AGUARDANDO->FALLBACK_1_1->ATIVO` e ok; `ATIVO->AGUARDANDO` BLOQUEADO sem flag `force=True` (so endpoint admin pode forcar)
+- [x] **FSM-AUDIT-02**: Toda transicao grava marker `GSC:{ag_id}:{from}:{to}:{reason}:{caller}` em conversas; argumento `caller` e obrigatorio sem default [amenda 2026-06-09: prefixo `GSC:` em vez de `GRUPO_STATE_CHANGE:` — este ultimo colide com `.like("GRUPO_STATE:%")` do get_grupo_state e corromperia o parser de estado]
 - [ ] **FSM-AUDIT-03**: Audit log volume ~150 rows/dia (desprezivel); CI grep check garante que nenhum caller chama `set_grupo_state` sem `reason` e `caller`
 
 ### Cat 5: TESTES REGRESSAO (Fase 14)
