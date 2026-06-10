@@ -172,7 +172,7 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
 **Plans**: 4 plans
 - [x] 13-01-PLAN.md — Wave 1 foundation: FSM monotonico (STATE_LEFT_GROUP + ALLOWED_TRANSITIONS) + caller obrigatorio + marker audit GSC: (FSM-AUDIT-01/02)
 - [x] 13-02-PLAN.md — Wave 2 LEAVE handler: webhook REMOVE marca saiu_em + LEAD_SAIU_GRUPO + FSM LEFT_GROUP + lead_in_group source='left_group' + D-1/notif DM redirect (LEAVE-01/02/03)
-- [ ] 13-03-PLAN.md — Wave 2 migracao: 7 callsites set_grupo_state/transition_grupo_state com reason+caller + sweep script (FSM-AUDIT-03)
+- [x] 13-03-PLAN.md — Wave 2 migracao: 7 callsites set_grupo_state/transition_grupo_state com reason+caller + sweep script (FSM-AUDIT-03)
 - [ ] 13-04-PLAN.md — Wave 3 tests + dashboard: test_fsm_monotonic + test_fsm_caller_ci + test_leave_handler + left_group decision + ?timeline=true em /admin/grupo/status
 
 ### Phase 14: Testes regressao + doc + observabilidade
@@ -198,7 +198,7 @@ Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
 | 10. Schema + 3 paths webhook write + cache standalone | 5/5 | Complete    | 2026-06-09 |
 | 11. `lead_in_group()` consumer + migrar fallback callers | 4/4 | Complete    | 2026-06-09 |
 | 12. Retry async + callers com margem | 3/3 | Complete    | 2026-06-10 |
-| 13. LEAVE handler + FSM audit monotonico | 2/4 | In Progress|  |
+| 13. LEAVE handler + FSM audit monotonico | 3/4 | In Progress|  |
 | 14. Testes regressao + doc + observabilidade | 0/TBD | Not started | - |
 
 ## Phase Order Rationale (v2.2)
