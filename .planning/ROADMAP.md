@@ -104,7 +104,7 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
  (completed 2026-06-10)
 - [x] **Phase 13: LEAVE handler + FSM audit monotonico** - Webhook REMOVE marca `saiu_em` + notif DM-first + transicoes estritamente monotonicas + audit log com `caller` obrigatorio
  (completed 2026-06-10)
-- [ ] **Phase 14: Testes regressao + doc + observabilidade** - Suite pytest 5 casos motivadores + memorias + healthcheck endpoint
+- [x] **Phase 14: Testes regressao + doc + observabilidade** - Suite pytest 5 casos motivadores + memorias + healthcheck endpoint (completed 2026-06-10)
 
 ## Phase Details
 
@@ -189,8 +189,8 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
   6. 13 testes pytest da v2.1 (commit 6159af5) continuam passing (nao regredidos) + 5 novos = suite completa de 18 testes roda em <60s
 **Plans**: 3 plans
 - [x] 14-01-PLAN.md — Wave 1: suite regressao test_v2_regression.py (4 pass + 1 skip G5) + source-audit dos 4 log markers (TEST-V2-G1..G5, OBS-V2-G1)
-- [ ] 14-02-PLAN.md — Wave 1: healthcheck +cache_hit_rate +total_rows_24h + BUILD_VERSION bump 2026-06-10-v2-2-completo (OBS-V2-G2)
-- [ ] 14-03-PLAN.md — Wave 2: doc in-repo grupo_membership_v2.md + checklist memorias + gate suite completa 113 testes (DOC-V2-G1/G2)
+- [x] 14-02-PLAN.md — Wave 1: healthcheck +cache_hit_rate +total_rows_24h + BUILD_VERSION bump 2026-06-10-v2-2-completo (OBS-V2-G2)
+- [x] 14-03-PLAN.md — Wave 2: doc in-repo grupo_membership_v2.md + checklist memorias + gate suite completa 113 testes (DOC-V2-G1/G2)
 
 ## Progress
 
@@ -203,7 +203,7 @@ Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
 | 11. `lead_in_group()` consumer + migrar fallback callers | 4/4 | Complete    | 2026-06-09 |
 | 12. Retry async + callers com margem | 3/3 | Complete    | 2026-06-10 |
 | 13. LEAVE handler + FSM audit monotonico | 4/4 | Complete    | 2026-06-10 |
-| 14. Testes regressao + doc + observabilidade | 1/3 | In Progress|  |
+| 14. Testes regressao + doc + observabilidade | 3/3 | Complete   | 2026-06-10 |
 
 ## Phase Order Rationale (v2.2)
 
