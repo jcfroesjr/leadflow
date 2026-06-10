@@ -158,16 +158,16 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
 - [x] 12-03-PLAN.md — Wave 3: suite pytest test_probe_retry.py (Validation Architecture: scheduling, max_age Valquiria, table-first Rosania, callers)
 
 ### Phase 13: LEAVE handler + FSM audit monotonico
-**Goal**: Fechar o ciclo de vida da membership. Webhook REMOVE marca `saiu_em` + insere marker `LEAD_SAIU_GRUPO`. Notif pre-reuniao e D-1 detectam `saiu_em != null` e redirecionam pro DM (nao grupo vazio). FSM transicoes estritamente monotonicas com argumento `caller` obrigatorio sem default — toda transicao gera audit log `GRUPO_STATE_CHANGE:{from}:{to}:{reason}:{caller}` em conversas.
+**Goal**: Fechar o ciclo de vida da membership. Webhook REMOVE marca `saiu_em` + insere marker `LEAD_SAIU_GRUPO`. Notif pre-reuniao e D-1 detectam `saiu_em != null` e redirecionam pro DM (nao grupo vazio). FSM transicoes estritamente monotonicas com argumento `caller` obrigatorio sem default — toda transicao gera audit log `GSC:{from}:{to}:{reason}:{caller}` em conversas.
 **Depends on**: Phase 10 (webhook handler existir), Phase 11 (`lead_in_group` consumir `saiu_em`)
 **Requirements**: LEAVE-01, LEAVE-02, LEAVE-03, FSM-AUDIT-01, FSM-AUDIT-02, FSM-AUDIT-03
 **Success Criteria** (what must be TRUE):
-  1. Webhook `GROUP_PARTICIPANTS_UPDATE action=remove` marca `grupo_membership.saiu_em = messageTimestamp` + insere marker `LEAD_SAIU_GRUPO:{grupo_jid}:{ts}` em conversas (idempotente)
+  1. Webhook `GROUP_PARTICIPANTS_UPDATE action=remove` marca `grupo_membership.saiu_em = messageTimestamp` + insere marker `LEAD_SAIU_GRUPO:{grupo_jid}` em conversas (idempotente — sem `{ts}`, ts persiste em saiu_em) [amenda 2026-06-09]
   2. Notif pre-reuniao e D-1 detectam `saiu_em != null` via `lead_in_group()` E enviam confirmacao via DM (nao grupo vazio) — caso lead-saiu nao perde confirmacao
   3. FSM transicao `ATIVO->AGUARDANDO` BLOQUEADA sem flag `force=True` (so endpoint admin pode forcar); tentativas registram audit `BLOCKED:{reason}` mas nao mudam estado
   4. `set_grupo_state()` exige argumento `caller` obrigatorio sem default — CI grep check garante que nenhum chamador passa "unknown" ou omite
-  5. Toda transicao FSM grava marker `GRUPO_STATE_CHANGE:{ag_id}:{from}:{to}:{reason}:{caller}` em conversas; query do dashboard `/admin/grupos` exibe timeline auditavel
-  6. Lead que saiu volta pra FSM `LEFT_GROUP` (novo estado terminal naquele agendamento); flag `LEFT_GROUP` no marker GRUPO_STATE_CHANGE diferencia de timeout normal
+  5. Toda transicao FSM grava marker `GSC:{ag_id}:{from}:{to}:{reason}:{caller}` em conversas (prefixo `GSC:` evita colisao com `.like("GRUPO_STATE:%")`); query do dashboard `/admin/grupos` (`?timeline=true`) exibe timeline auditavel [amenda 2026-06-09]
+  6. Lead que saiu volta pra FSM `LEFT_GROUP` (novo estado terminal naquele agendamento); flag `LEFT_GROUP` no marker GSC diferencia de timeout normal
 **UI hint**: yes
 **Plans**: 4 plans
 - [ ] 13-01-PLAN.md — Wave 1 foundation: FSM monotonico (STATE_LEFT_GROUP + ALLOWED_TRANSITIONS) + caller obrigatorio + marker audit GSC: (FSM-AUDIT-01/02)

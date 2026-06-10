@@ -94,14 +94,14 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 
 ### Cat 3: LEAVE HANDLER (Fase 13)
 
-- [ ] **LEAVE-01**: Webhook `GROUP_PARTICIPANTS_UPDATE action="remove"` marca `grupo_membership.saiu_em = messageTimestamp` + insere marker `LEAD_SAIU_GRUPO:{grupo_jid}:{ts}` em conversas
+- [ ] **LEAVE-01**: Webhook `GROUP_PARTICIPANTS_UPDATE action="remove"` marca `grupo_membership.saiu_em = messageTimestamp` + insere marker `LEAD_SAIU_GRUPO:{grupo_jid}` em conversas (sem `{ts}` — timestamp ja persiste em `saiu_em`; idempotencia via guard `saiu_em IS NULL` no UPDATE) [amenda 2026-06-09 pos plan-check]
 - [ ] **LEAVE-02**: Notif pre-reuniao + D-1 detectam `saiu_em != null` na `lead_in_group()` E redirecionam pro DM (nao pra grupo vazio)
-- [ ] **LEAVE-03**: FSM de grupo do lead que saiu volta pra `FALLBACK_1_1` (com flag `LEFT_GROUP` no marker GRUPO_STATE_CHANGE)
+- [ ] **LEAVE-03**: FSM de grupo do lead que saiu vai pra `LEFT_GROUP` (novo estado terminal naquele agendamento; marker GSC carrega flag LEFT_GROUP pra diferenciar de timeout normal) [amenda 2026-06-09: LEFT_GROUP terminal em vez de FALLBACK_1_1, decisao do usuario, alinha com SC6]
 
 ### Cat 4: FSM MONOTONICO + AUDIT LOG (Fase 13)
 
 - [ ] **FSM-AUDIT-01**: `set_grupo_state()` valida transicao estritamente monotonica: `AGUARDANDO->FALLBACK_1_1->ATIVO` e ok; `ATIVO->AGUARDANDO` BLOQUEADO sem flag `force=True` (so endpoint admin pode forcar)
-- [ ] **FSM-AUDIT-02**: Toda transicao grava marker `GRUPO_STATE_CHANGE:{ag_id}:{from}:{to}:{reason}:{caller}` em conversas; argumento `caller` e obrigatorio sem default
+- [ ] **FSM-AUDIT-02**: Toda transicao grava marker `GSC:{ag_id}:{from}:{to}:{reason}:{caller}` em conversas; argumento `caller` e obrigatorio sem default [amenda 2026-06-09: prefixo `GSC:` em vez de `GRUPO_STATE_CHANGE:` — este ultimo colide com `.like("GRUPO_STATE:%")` do get_grupo_state e corromperia o parser de estado]
 - [ ] **FSM-AUDIT-03**: Audit log volume ~150 rows/dia (desprezivel); CI grep check garante que nenhum caller chama `set_grupo_state` sem `reason` e `caller`
 
 ### Cat 5: TESTES REGRESSAO (Fase 14)
