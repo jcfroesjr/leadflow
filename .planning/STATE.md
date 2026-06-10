@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: — Webhook-First Grupo Membership
 status: verifying
-last_updated: "2026-06-10T04:38:40.719Z"
+last_updated: "2026-06-10T04:55:26.536Z"
 last_activity: 2026-06-10
 progress:
   total_phases: 5
@@ -17,8 +17,8 @@ progress:
 
 ## Current Position
 
-Phase: 14 (Testes regressao + doc + observabilidade) — EXECUTING
-Plan: 3 of 3
+Phase: 14
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-06-10
 
