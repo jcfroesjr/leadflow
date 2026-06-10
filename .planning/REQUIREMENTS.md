@@ -106,17 +106,17 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 
 ### Cat 5: TESTES REGRESSAO (Fase 14)
 
-- [ ] **TEST-V2-G1**: Caso Ana Carla 08/06 — lead adicionado direto em `createGroup`, `grupo_membership` populada via Path 3, FSM=ATIVO em <60s sem precisar probe live
-- [ ] **TEST-V2-G2**: Caso Rosania 08/06 — webhook GROUP_PARTICIPANTS_UPDATE chega T+138s, sistema espera (probe retry com `max_age=600s`) em vez de cair pro DM
-- [ ] **TEST-V2-G3**: Caso Fernanda 07/06 — grupo orfao de instancia antiga detectado em `lead_in_group` (instance_key mismatch) E novo grupo criado automatico
-- [ ] **TEST-V2-G4**: Caso Valquiria 06/06 — aquec recovery nao dispara item velho (cobertura adicional ao RECOVERY-AQUEC-01); job retry descartado por `max_age_seconds`
-- [ ] **TEST-V2-G5**: Caso 553891500357 09/06 — reproducao completa *(blocked-pending-data: precisa de trace do webhook + conversas do incidente)*
+- [x] **TEST-V2-G1**: Caso Ana Carla 08/06 — lead adicionado direto em `createGroup`, `grupo_membership` populada via Path 3, FSM=ATIVO em <60s sem precisar probe live
+- [x] **TEST-V2-G2**: Caso Rosania 08/06 — webhook GROUP_PARTICIPANTS_UPDATE chega T+138s, sistema espera (probe retry com `max_age=600s`) em vez de cair pro DM
+- [x] **TEST-V2-G3**: Caso Fernanda 07/06 — grupo orfao de instancia antiga detectado em `lead_in_group` (instance_key mismatch) E novo grupo criado automatico
+- [x] **TEST-V2-G4**: Caso Valquiria 06/06 — aquec recovery nao dispara item velho (cobertura adicional ao RECOVERY-AQUEC-01); job retry descartado por `max_age_seconds`
+- [x] **TEST-V2-G5**: Caso 553891500357 09/06 — reproducao completa *(blocked-pending-data: precisa de trace do webhook + conversas do incidente)*
 
 ### Cat 6: DOC + OBSERVABILIDADE (Fase 14)
 
 - [ ] **DOC-V2-G1**: Memoria `sessao_2026-06-XX_grupo_membership_v2.md` + nova `grupo_membership_arquitetura.md` em memory
 - [ ] **DOC-V2-G2**: Atualizar `agente_referencia_compilada.md` com tabela `grupo_membership` + `lead_in_group()` + retry async + FSM audit
-- [ ] **OBS-V2-G1**: Logs `[MEMB-WRITE]`, `[MEMB-LOOKUP]`, `[PROBE-RETRY]`, `[GRUPO-STATE-CHANGE]` estruturados
+- [x] **OBS-V2-G1**: Logs `[MEMB-WRITE]`, `[MEMB-LOOKUP]`, `[PROBE-RETRY]`, `[GRUPO-STATE-CHANGE]` estruturados
 - [ ] **OBS-V2-G2**: Endpoint `/health/grupo-membership` retorna `{total_rows, last_write_at, cache_size, cache_hit_rate}` pra detectar cache mascarando falha de persistencia
 
 ---
