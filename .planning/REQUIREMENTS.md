@@ -89,7 +89,7 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 
 - [ ] **PROBE-CACHE-01** (Fase 10): Singleton `app/services/probe_cache.py` com `cachetools.TTLCache(maxsize=512, ttl=300)` + `RLock`; chave `(empresa_id, grupo_jid, telefone, lid)`; invalidacao automatica em todo UPSERT de `grupo_membership` via helper centralizado
 - [x] **PROBE-COALESCE-01** (Fase 11 — movido da Fase 10 em 09/06 pos plan-checker): `asyncio.Lock` por chave evita 3 jobs probando o mesmo grupo simultaneamente. Materializa junto do consumer `lead_in_group()` que dispara os probes concorrentes.
-- [ ] **PROBE-RETRY-01**: Funcao `schedule_probe_retry(empresa_id, grupo_jid, telefone, lid, attempts_left=3, max_age_seconds=600)` — job APScheduler one-shot `trigger='date'`. Tentativas em 30s/2min/5min. **`max_age_seconds` absoluto** descarta job se janela passou (cobre Rosania + Valquiria).
+- [x] **PROBE-RETRY-01**: Funcao `schedule_probe_retry(empresa_id, grupo_jid, telefone, lid, attempts_left=3, max_age_seconds=600)` — job APScheduler one-shot `trigger='date'`. Tentativas em 30s/2min/5min. **`max_age_seconds` absoluto** descarta job se janela passou (cobre Rosania + Valquiria).
 - [ ] **PROBE-RETRY-02**: Migrar callers com margem temporal (notif pre-reuniao, timeout 30min FALLBACK) pra usar retry async em vez de probe sincrono. Aquec mantem sincrono mas consulta `grupo_membership` primeiro.
 
 ### Cat 3: LEAVE HANDLER (Fase 13)
