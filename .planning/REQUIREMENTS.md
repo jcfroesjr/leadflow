@@ -117,7 +117,7 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 - [ ] **DOC-V2-G1**: Memoria `sessao_2026-06-XX_grupo_membership_v2.md` + nova `grupo_membership_arquitetura.md` em memory
 - [ ] **DOC-V2-G2**: Atualizar `agente_referencia_compilada.md` com tabela `grupo_membership` + `lead_in_group()` + retry async + FSM audit
 - [x] **OBS-V2-G1**: Logs `[MEMB-WRITE]`, `[MEMB-LOOKUP]`, `[PROBE-RETRY]`, `[GRUPO-STATE-CHANGE]` estruturados
-- [ ] **OBS-V2-G2**: Endpoint `/health/grupo-membership` retorna `{total_rows, last_write_at, cache_size, cache_hit_rate}` pra detectar cache mascarando falha de persistencia
+- [x] **OBS-V2-G2**: Endpoint `/health/grupo-membership` retorna `{total_rows, last_write_at, cache_size, cache_hit_rate}` pra detectar cache mascarando falha de persistencia
 
 ---
 

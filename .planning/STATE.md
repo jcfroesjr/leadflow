@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: — Webhook-First Grupo Membership
 status: executing
-last_updated: "2026-06-10T04:24:37.882Z"
+last_updated: "2026-06-10T04:29:57.278Z"
 last_activity: 2026-06-10
 progress:
   total_phases: 5
@@ -18,7 +18,7 @@ progress:
 ## Current Position
 
 Phase: 14 (Testes regressao + doc + observabilidade) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-10
 
@@ -67,6 +67,7 @@ Last activity: 2026-06-10
 | Phase 13-leave-handler-fsm-audit-monotonico P03 | 5min | 3 tasks | 4 files |
 | Phase 13-leave-handler-fsm-audit-monotonico P04 | 20min | 3 tasks | 4 files |
 | Phase 14-testes-regressao-doc-observabilidade P14-01 | 3min | 2 tasks | 1 files |
+| Phase 14-testes-regressao-doc-observabilidade P02 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context (preservado entre milestones)
 
