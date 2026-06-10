@@ -78,16 +78,16 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 
 ### Cat 1: MEMBERSHIP TABLE (Fase 10 — schema + 3 paths de escrita)
 
-- [ ] **MEMB-01**: Migration `004_grupo_membership.sql` criando tabela `(empresa_id UUID, grupo_jid TEXT, telefone TEXT NULL, lid TEXT NULL, instance_key TEXT NOT NULL, entrou_em TIMESTAMPTZ, saiu_em TIMESTAMPTZ NULL, last_event_id TEXT, criado_em, atualizado_em)` + partial unique `WHERE saiu_em IS NULL` em `(empresa_id, grupo_jid, COALESCE(telefone, lid))` + indexes + RLS service_role only
-- [ ] **MEMB-02**: Webhook `GROUP_PARTICIPANTS_UPDATE` (Path 1) UPSERT em `grupo_membership` quando `action="add"` (entrou_em = `messageTimestamp` do payload, NAO `NOW()`)
-- [ ] **MEMB-03**: Webhook `MESSAGES_UPSERT` (Path 2) UPSERT em `grupo_membership` quando msg vem de grupo + 1 lead aguardando + @lid nao-mapped ainda
-- [ ] **MEMB-04**: `_criar_grupo_agendamento` (Path 3 — createGroup response) faz INSERT direto em `grupo_membership` pro participant retornado por Evolution (caso Ana Carla: webhook ADD nao dispara aqui)
+- [x] **MEMB-01**: Migration `004_grupo_membership.sql` criando tabela `(empresa_id UUID, grupo_jid TEXT, telefone TEXT NULL, lid TEXT NULL, instance_key TEXT NOT NULL, entrou_em TIMESTAMPTZ, saiu_em TIMESTAMPTZ NULL, last_event_id TEXT, criado_em, atualizado_em)` + partial unique `WHERE saiu_em IS NULL` em `(empresa_id, grupo_jid, COALESCE(telefone, lid))` + indexes + RLS service_role only
+- [x] **MEMB-02**: Webhook `GROUP_PARTICIPANTS_UPDATE` (Path 1) UPSERT em `grupo_membership` quando `action="add"` (entrou_em = `messageTimestamp` do payload, NAO `NOW()`)
+- [x] **MEMB-03**: Webhook `MESSAGES_UPSERT` (Path 2) UPSERT em `grupo_membership` quando msg vem de grupo + 1 lead aguardando + @lid nao-mapped ainda
+- [x] **MEMB-04**: `_criar_grupo_agendamento` (Path 3 — createGroup response) faz INSERT direto em `grupo_membership` pro participant retornado por Evolution (caso Ana Carla: webhook ADD nao dispara aqui)
 - [x] **MEMB-05**: Funcao `lead_in_group(sb, empresa_id, telefone, grupo_jid, lid="") -> dict {in_group, source, last_event_at, instance_key_match}` consulta `grupo_membership` PRIMEIRO; so vai pro probe Evolution se row ausente OU saiu_em != null
-- [ ] **MEMB-06**: Query filtra `WHERE instance_key = empresa.evolution_key_atual` — rows de instancia antiga (Fernanda) NAO contam
+- [x] **MEMB-06**: Query filtra `WHERE instance_key = empresa.evolution_key_atual` — rows de instancia antiga (Fernanda) NAO contam
 
 ### Cat 2: PROBE FALLBACK COM RETRY + CACHE (Fases 10-12)
 
-- [ ] **PROBE-CACHE-01** (Fase 10): Singleton `app/services/probe_cache.py` com `cachetools.TTLCache(maxsize=512, ttl=300)` + `RLock`; chave `(empresa_id, grupo_jid, telefone, lid)`; invalidacao automatica em todo UPSERT de `grupo_membership` via helper centralizado
+- [x] **PROBE-CACHE-01** (Fase 10): Singleton `app/services/probe_cache.py` com `cachetools.TTLCache(maxsize=512, ttl=300)` + `RLock`; chave `(empresa_id, grupo_jid, telefone, lid)`; invalidacao automatica em todo UPSERT de `grupo_membership` via helper centralizado
 - [x] **PROBE-COALESCE-01** (Fase 11 — movido da Fase 10 em 09/06 pos plan-checker): `asyncio.Lock` por chave evita 3 jobs probando o mesmo grupo simultaneamente. Materializa junto do consumer `lead_in_group()` que dispara os probes concorrentes.
 - [x] **PROBE-RETRY-01**: Funcao `schedule_probe_retry(empresa_id, grupo_jid, telefone, lid, attempts_left=3, max_age_seconds=600)` — job APScheduler one-shot `trigger='date'`. Tentativas em 30s/2min/5min. **`max_age_seconds` absoluto** descarta job se janela passou (cobre Rosania + Valquiria).
 - [x] **PROBE-RETRY-02**: Migrar callers com margem temporal (notif pre-reuniao, timeout 30min FALLBACK) pra usar retry async em vez de probe sincrono. Aquec mantem sincrono mas consulta `grupo_membership` primeiro.
