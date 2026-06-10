@@ -98,7 +98,8 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
 
 - [x] **Phase 10: Schema + 3 paths webhook write + cache standalone** - Tabela `grupo_membership` com `instance_key` + UPSERT em 3 paths (webhook ADD, MESSAGES_UPSERT, createGroup direct) + cache singleton (coalescing movido pra Fase 11)
  (completed 2026-06-09)
-- [x] **Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async** - Funcao central de leitura tabela-primeira + migra 6 callsites + asyncio.Lock coalescing (completed 2026-06-09)
+- [x] **Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async** - Funcao central de leitura tabela-primeira + migra 6 callsites + asyncio.Lock coalescing
+ (completed 2026-06-09)
 - [ ] **Phase 12: Retry async + callers com margem** - APScheduler retry exponencial 30s/2min/5min com `max_age_seconds=600` absoluto + migra callers com margem temporal
 - [ ] **Phase 13: LEAVE handler + FSM audit monotonico** - Webhook REMOVE marca `saiu_em` + notif DM-first + transicoes estritamente monotonicas + audit log com `caller` obrigatorio
 - [ ] **Phase 14: Testes regressao + doc + observabilidade** - Suite pytest 5 casos motivadores + memorias + healthcheck endpoint
@@ -147,10 +148,13 @@ v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta
   1. Probe negativo inicial nao conclui — enfileira retry async via APScheduler `add_job(trigger='date', run_date=NOW+30s)` com `id=f"probe_retry:{grupo_jid}:{telefone}:{attempt}"` + `replace_existing=True`
   2. Retry handler verifica `now - enqueued_at < max_age_seconds (600s)` antes de executar; job velho descartado com log `[JOB_EXPIRED]` (caso Valquiria nao regride mesmo com retry adicionado)
   3. Webhook que chegar entre tentativas (caso Rosania T+138s) faz retry consultar tabela primeiro, encontrar row, encerrar com sucesso silencioso sem chamar Evolution
-  4. Notif pre-reuniao (`confirmacao_agendamento.py:291`) e timeout 30min (`_executar_timeout_grupo_aguardando`) migrados para `schedule_retry_on_negative=True`; aquec mantem sincrono (decisao "AGORA")
+  4. Notif D-1 (`confirmacao_agendamento.py:291`) e notif pre-reuniao (`warmup_grupo.py`) migrados para `schedule_retry_on_negative=True`; aquec mantem sincrono (decisao "AGORA"). NOTA (research): `_executar_timeout_grupo_aguardando` NAO tem probe — so transiciona FSM; o segundo caller-com-margem real e a notif do warmup.
   5. APScheduler em modo in-memory explicito (jobs perdidos em restart sao re-enfileirados via recovery startup baseado em estado DB)
   6. `asyncio.create_task` naked PROIBIDO no retry path — todos os agendamentos passam por `scheduler.add_job` (evita silent task drop)
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 12-01-PLAN.md — Wave 1: schedule_probe_retry() + _probe_retry_job() (max_age guard + table-first) + ativacao stub no STEP 5 de lead_in_group (PROBE-RETRY-01)
+- [ ] 12-02-PLAN.md — Wave 2: migra 2 callers com margem (confirmacao D-1 + notif warmup) + recovery startup; aquec mantem sincrono (PROBE-RETRY-02)
+- [ ] 12-03-PLAN.md — Wave 3: suite pytest test_probe_retry.py (Validation Architecture: scheduling, max_age Valquiria, table-first Rosania, callers)
 
 ### Phase 13: LEAVE handler + FSM audit monotonico
 **Goal**: Fechar o ciclo de vida da membership. Webhook REMOVE marca `saiu_em` + insere marker `LEAD_SAIU_GRUPO`. Notif pre-reuniao e D-1 detectam `saiu_em != null` e redirecionam pro DM (nao grupo vazio). FSM transicoes estritamente monotonicas com argumento `caller` obrigatorio sem default — toda transicao gera audit log `GRUPO_STATE_CHANGE:{from}:{to}:{reason}:{caller}` em conversas.
@@ -188,7 +192,7 @@ Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
 |-------|----------------|--------|-----------|
 | 10. Schema + 3 paths webhook write + cache standalone | 5/5 | Complete    | 2026-06-09 |
 | 11. `lead_in_group()` consumer + migrar fallback callers | 4/4 | Complete    | 2026-06-09 |
-| 12. Retry async + callers com margem | 0/TBD | Not started | - |
+| 12. Retry async + callers com margem | 0/3 | Not started | - |
 | 13. LEAVE handler + FSM audit monotonico | 0/TBD | Not started | - |
 | 14. Testes regressao + doc + observabilidade | 0/TBD | Not started | - |
 
