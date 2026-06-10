@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: — Webhook-First Grupo Membership
 status: verifying
-last_updated: "2026-06-10T03:16:47.647Z"
+last_updated: "2026-06-10T03:35:59.873Z"
 last_activity: 2026-06-10
 progress:
   total_phases: 5
@@ -17,8 +17,8 @@ progress:
 
 ## Current Position
 
-Phase: 13 (LEAVE handler + FSM audit monotonico) — EXECUTING
-Plan: 4 of 4
+Phase: 14
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-06-10
 

@@ -198,7 +198,7 @@ Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
 | 10. Schema + 3 paths webhook write + cache standalone | 5/5 | Complete    | 2026-06-09 |
 | 11. `lead_in_group()` consumer + migrar fallback callers | 4/4 | Complete    | 2026-06-09 |
 | 12. Retry async + callers com margem | 3/3 | Complete    | 2026-06-10 |
-| 13. LEAVE handler + FSM audit monotonico | 4/4 | Complete   | 2026-06-10 |
+| 13. LEAVE handler + FSM audit monotonico | 4/4 | Complete    | 2026-06-10 |
 | 14. Testes regressao + doc + observabilidade | 0/TBD | Not started | - |
 
 ## Phase Order Rationale (v2.2)
