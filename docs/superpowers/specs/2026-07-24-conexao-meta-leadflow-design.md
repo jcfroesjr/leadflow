@@ -232,12 +232,52 @@ O checklist da Meta muda com frequência; o quadro de requisitos do próprio App
 ## 8. O que fica de fora
 
 - **Grupo na Cloud API** — a plataforma não suporta. `criar_grupo` recusa explicitamente pra empresa em canal oficial, barrando a porta de entrada do fluxo.
-- **Follow-up fora da janela de 24h** — se o lead não responder a Q1, o follow-up (24h/48h) cai fora da janela e a Meta recusa com 131047. Precisa de um segundo template aprovado. **É a pendência mais relevante que sobra**: hoje o follow-up simplesmente falha e o motivo aparece no log.
+- ~~**Follow-up fora da janela de 24h**~~ — **RESOLVIDO**, ver §10.
 - **Mensagem de fora-do-horário** — mesmo motivo (texto próprio, sem template). Lead fica `pendente`.
 - **Botões interativos** — a Meta tem, com contrato próprio e limite de 3×20 chars. Degrada pra texto; o lead sempre pode responder escrevendo.
 - **Migração de empresa que já roda na Evolution** — o número precisa sair da sessão do WhatsApp Web antes da Meta liberar. Procedimento operacional, não código.
 - **Disparo em massa** — é pago na Cloud API e não é caso de uso do Leadflow.
 - **Rotação da chave de cifra** — trocar `META_TOKEN_ENC_KEY` exige reconexão de todas as empresas.
+
+## 10. Follow-up e a janela de 24h
+
+### O fato que define tudo
+
+A janela grátis abre com **mensagem do lead**, não com a nossa. Template que a gente envia não abre nada. Então "todos os FUs dentro da janela" **não é alcançável** — para o lead que nunca escreveu, não existe janela pra caber dentro.
+
+### Como isso cai nas sequências do Leadflow
+
+O executor de FU **já cancela o follow-up se o lead respondeu depois do START** ([`followup_agenda.py`](../../../leadflow-backend/app/routers/followup_agenda.py)). Então todo FU que dispara é de lead silencioso — e o que importa é *quando ele falou por último*:
+
+| Sequência | Última msg do lead | Janela |
+|---|---|---|
+| `FOLLOWUP_AGENDA_START` | ≈ no `start_ts` (o marcador é salvo logo após o bot responder a ele) | **aberta** até ≈ `start_ts + 24h` |
+| `FOLLOWUP_CANCEL_START` | idem | **aberta** |
+| `FOLLOWUP_Q1_START` | nunca escreveu | **nunca abriu** |
+
+### Decisão do dono (24/07)
+
+> Lead que respondeu recebe **2 FUs dentro da janela de 24h** (grátis). Se a janela não abrir, paga **1 disparo**.
+
+Implementação em [`cloud_api_janela.py`](../../../leadflow-backend/app/services/cloud_api_janela.py):
+
+- **Teto de 23h** (não 24h): jitter anti-rajada, throttle e atraso de scheduler comem minutos. 1h de folga evita perder a gratuidade por alguns minutos.
+- Os 2 primeiros FUs de sequência **com janela** são antecipados pra `start_ts + 8h` e `start_ts + 23h` quando os delays configurados não cabem. FU que já cabe não é tocado.
+- `FOLLOWUP_Q1_START` **não é comprimido** — antecipar não deixa nada de graça ali, só encurtaria a cadência sem motivo.
+- FU a partir do 3º fica fora da janela e vira template pago no envio. É a escolha, não bug — e o corte é logado.
+- **Quiet-hours ganha do custo** (escolha do dono): se a antecipação cair em 21-08h, `_ajustar_madrugada` empurra pra ~09h e esse FU é cobrado. Na prática é raro — Q1 sai em horário comercial, e 23h depois também é.
+
+### Fallback no envio, não no agendamento
+
+A decisão grátis-vs-pago é tomada **na hora de enviar**, não ao agendar: o lead pode escrever no meio do caminho e mover a janela. O `send_text` tenta texto livre; se a Meta recusar com `131047`, cai no template aprovado (`fora_da_janela=True` → `_enviar_fu_por_template`).
+
+**Trade-off aceito — 1 único template de follow-up:** o texto que sai é o do template aprovado, não o do item da sequência que disparou. Aprovar um template por mensagem de cada sequência (agenda/cancel/noshow/q1) multiplicaria a fricção na Meta sem economizar nada, já que todos seriam cobrados igual. Consequência concreta: um FU de agenda com janela fechada entrega o texto genérico de retomada. O log diz o que saiu, e o histórico em `conversas` grava o texto real entregue.
+
+### Nada disso toca a Evolution
+
+Restrição explícita do dono: *"não pode mudar nada atual"*. Toda função de janela checa o canal e devolve o valor original para empresa fora do canal oficial. Travado por teste — `TestJanela24h::test_evolution_nao_e_tocada` e a classe `TestEvolucaoIntacta`, que verifica que a Q1 chega ao primitivo da Evolution com os **mesmos argumentos** e retorno inalterado, inclusive quando a resolução de canal falha (fail-closed pra Evolution).
+
+Pegada no caminho atual: um `SELECT` por empresa a cada 60s (cache TTL) para resolver o canal, e duas colunas a mais no `select` do executor de FU. Nenhuma mudança de comportamento.
 
 ## 9. Referências no AvalancheVendas
 
