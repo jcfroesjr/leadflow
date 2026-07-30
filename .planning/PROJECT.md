@@ -16,19 +16,19 @@ Lead preenche formulário externo → webhook cria lead no Leadflow → agente I
 
 **Operador (admin)** entra no frontend, vê leads/conversas em tempo real, configura prompt e horários, monitora pipeline, sem abrir outras ferramentas.
 
-## Current Milestone: v2.2 Identificação Definitiva de Lead no Grupo (Webhook-First)
+## Current Milestone: v3.0 Cobranças (Asaas) + Empresa-mãe
 
-**Goal:** Eliminar falsos negativos persistentes do probe Evolution invertendo a fonte da verdade — webhook `GROUP_PARTICIPANTS_UPDATE` torna-se primário via tabela materializada `grupo_membership`, probe Evolution vira fallback com retry exponencial + cache curto.
+**Goal:** Ligar e completar a monetização do LeadFlow — billing Asaas ativo, área "Cobranças" no painel, notificações de cobrança da mensalidade, e a empresa-mãe (a do próprio dono) implantada pra captar leads e vender o sistema.
 
 **Target features:**
-- Tabela `grupo_membership` (grupo_jid, telefone, @lid, entrou_em, saiu_em) — fonte primária consultada antes do probe
-- Probe Evolution com retry exponencial (30s/2min/5min) — false negative inicial não conclui
-- Cache de resultado de probe (5min TTL) — evita bombardear API quando múltiplos jobs consultam mesmo grupo
-- Handler webhook LEAVE/REMOVE — lead que sai dispara notif via DM, FSM marca `LEFT_GROUP`
-- FSM transições estritamente monotônicas + audit log (`GRUPO_STATE_CHANGE:{from}:{to}:{reason}`)
-- Suite testes regressão pros 5 casos do dia 08/06 (Ana Carla, Rosânia, Fernanda, Valquíria, 553891500357)
+- **Ativar o billing de plataforma existente** (`feature_billing_plataforma_asaas`, 13/07 — port AvalancheVendas): rodar migration `010_plataforma_billing.sql`, configurar env Asaas central + webhook, validar `/cadastro` pago (pay-first, sem trial)
+- **Área "Cobranças" no painel**: lista de empresas/assinaturas com status (active/past_due/suspended/pending_payment), inadimplência, valor/vencimento, link da fatura Asaas, histórico de pagamentos
+- **Notificações de cobrança (WhatsApp)**: lembrete de vencimento próximo + aviso de atraso (past_due), configurável e idempotente
+- **Implantação da empresa-mãe**: criar a empresa do dono no LeadFlow (persona/prompt/Q1-Q3/empatia/FPs/webhook via playbook) pra captar leads de venda do próprio sistema
 
-**Causa-raiz reaberta (sessão 08-09/06):** v2.1 entregou captura `@lid` + endpoints admin + 13 testes. Casos Karla/Crislaine/Patrícia resolvidos. **Mas** v2.1 manteve probe Evolution como fonte primária com `@lid` como matcher alternativo. Quando Evolution mente ou demora (caso comum: 60-180s pra propagar membros), todos os patches caem. Os 6 fixes do dia 08/06 (floor 180s, sem alerta, valida reuso, recovery 6h, etc) são paliativos sobre a mesma base não-confiável. Esta milestone inverte: webhook é fonte primária, probe é backup com retry.
+**Contexto-chave:** o MOTOR de billing já EXISTE e está construído (backend `app/services/billing/` + `routers/billing.py` + `webhook_plataforma.py` + `asaas_client.py` + migration `010` + `CadastroPage.tsx`), com gate OFF + grandfather das empresas atuais. Esta milestone **ATIVA** o motor + adiciona a **UI de gestão (Cobranças)** + **notificações** + a **implantação da empresa-mãe**. NÃO reconstruir o motor — reusar o que está portado do AvalancheVendas.
+
+**Histórico v2.2 (Webhook-First Grupo Membership) — CONCLUÍDA 10/06:** Fases 10-14 (tabela `grupo_membership` como fonte primária, probe Evolution com retry exponencial, handler LEAVE/REMOVE, FSM monotônico + audit log, suite de testes de regressão). 100% shippada.
 
 **Histórico v2.1 (Grupo Robusto):** Fases 3-9 entregues (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 0717e1c, 8d9fe5c, f97686c, 6159af5). Suite 13 testes pytest commitada. Casos Karla/Crislaine/Patrícia resolvidos. Out-of-scope `leads.lid_whatsapp` mantido (marker em conversas) — v2.2 usa tabela dedicada `grupo_membership` em vez de coluna no leads.
 
@@ -94,34 +94,26 @@ Lead preenche formulário externo → webhook cria lead no Leadflow → agente I
 - ✓ **RECOVERY-AQUEC-01**: Recovery aquec descarta items pendentes >6h do START (commit 0d55888)
 - ✓ **RLS-HARD-01**: Migration 003 — RLS em processing_locks/convites_pendentes + SECURITY INVOKER em v_agendamentos_painel (commit 073c93f)
 
-### Active (Milestone v2.2 — Webhook-First)
+### Active (Milestone v3.0 — Cobranças + Empresa-mãe)
 
-- [ ] **MEMB-01**: Migration `grupo_membership` (grupo_jid, telefone, lid, entrou_em, saiu_em, criado_em, atualizado_em) + indexes
-- [ ] **MEMB-02**: Webhook GROUP_PARTICIPANTS_UPDATE escreve row em `grupo_membership` (UPSERT por grupo_jid+telefone), eventos ADD/REMOVE
-- [ ] **MEMB-03**: Webhook MESSAGES_UPSERT (msg do lead no grupo) UPSERT em `grupo_membership` quando match @lid + grupo aguardando
-- [ ] **MEMB-04**: Função `lead_in_group(empresa_id, telefone, grupo_jid)` consulta `grupo_membership` PRIMEIRO; só vai pro probe Evolution se row ausente OU saiu_em != null
-- [ ] **PROBE-RETRY-01**: `verificar_lead_no_grupo` ganha modo `retry_async=True` que enfileira retry em 30s/2min/5min via APScheduler antes de concluir negativo definitivo
-- [ ] **PROBE-CACHE-01**: Cache em memória (TTL 5min) por chave `(grupo_jid, telefone, lid)` — múltiplos callers no mesmo job dispatch compartilham resultado
-- [ ] **LEAVE-01**: Handler webhook REMOVE marca `grupo_membership.saiu_em` + insere marker `LEAD_SAIU_GRUPO:{jid}` em conversas
-- [ ] **LEAVE-02**: Notif pré-reunião e D-1 detectam `saiu_em != null` E vai pro DM (não grupo vazio)
-- [ ] **FSM-AUDIT-01**: `set_grupo_state` valida transição estritamente monotônica (AGUARDANDO→ATIVO ok; ATIVO→AGUARDANDO BLOQUEADO sem flag de override)
-- [ ] **FSM-AUDIT-02**: Toda transição grava `GRUPO_STATE_CHANGE:{from}:{to}:{reason}:{caller}` em conversas (audit log)
-- [ ] **TEST-V2-G1**: Caso Ana Carla 08/06 — lead adicionado direto em createGroup, FSM=ATIVO em <60s sem precisar probe live
-- [ ] **TEST-V2-G2**: Caso Rosânia 08/06 — webhook GROUP_PARTICIPANTS_UPDATE chega T+138s, sistema espera (probe retry) em vez de cair pro DM
-- [ ] **TEST-V2-G3**: Caso Fernanda 07/06 — grupo órfão de instância antiga detectado em `lead_in_group` E novo grupo criado automático
-- [ ] **TEST-V2-G4**: Caso Valquíria 06/06 — aquec recovery não dispara item velho (cobertura adicional ao RECOVERY-AQUEC-01)
-- [ ] **TEST-V2-G5**: Caso 553891500357 09/06 — reprodução completa (passo a passo do incidente)
-- [ ] **DOC-V2-G1**: Atualizar `agente_ia_fixes.md` + criar `grupo_membership_arquitetura.md` em memory
+- [ ] **BILL-ACT**: Billing de plataforma ATIVADO (migration `010` rodada, env Asaas central + webhook configurados, `/cadastro` pago validado sandbox→prod)
+- [ ] **COBR-UI**: Área "Cobranças" no painel — assinaturas das empresas com status (active/past_due/suspended/pending_payment), inadimplência, valor/vencimento, link fatura Asaas, histórico de pagamentos
+- [ ] **COBR-NOTIF**: Notificações de cobrança (WhatsApp) — lembrete de vencimento próximo + aviso de atraso (past_due), idempotente e configurável
+- [ ] **IMPL-MAE**: Empresa-mãe implantada (persona/prompt/Q1-Q3/empatia/FPs/webhook via playbook) captando leads de venda do próprio LeadFlow
 
-### Out of Scope (milestone v2.2)
+*(REQ-IDs detalhados em `REQUIREMENTS.md`)*
 
-- Coluna `leads.lid_whatsapp` (tabela dedicada `grupo_membership` substitui — relação N:N lead × grupo)
-- Reescrita do FSM AGUARDANDO/FALLBACK_1_1/ATIVO — só endurecer transições + audit log
-- Multi-instance backend (segue out-of-scope do v2.0/v2.1)
-- Redis pra cache de probe — in-memory é suficiente (single-worker no Easypanel)
-- Eventos webhook Evolution adicionais além de GROUP_PARTICIPANTS_UPDATE, MESSAGES_UPSERT, CONNECTION_UPDATE, MESSAGES_UPDATE (já usados)
-- Reescrita do probe Evolution em si — só adicionar retry+cache em volta
-- Backfill retroativo de `grupo_membership` pra grupos antigos — só registra a partir do deploy (grupos antigos seguem com markers atuais)
+### Out of Scope (milestone v3.0)
+
+- Empresa cobrando os PRÓPRIOS clientes finais dela via Asaas — nesta milestone só plataforma→empresas
+- Gateway de pagamento além do Asaas (Stripe/PayPal/etc)
+- Reescrita do motor de billing portado do AvalancheVendas — só ativar + UI + notificações em volta
+- Cobrança por uso / metered billing — só assinatura fixa (mensal R$297 / anual R$2970)
+- Dunning automático complexo (retry de cartão, downgrade automático) — só notificação + status de inadimplência
+
+### Validated (v2.2 — shippado 10/06)
+
+- ✓ Fases 10-14 Webhook-First Grupo Membership: tabela `grupo_membership` (fonte primária), probe retry exponencial, handler LEAVE/REMOVE, FSM monotônico + audit log, suite de testes (STATE.md: 100%)
 
 ## Context
 
@@ -204,4 +196,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-09 — v2.1 (Grupo Robusto) entregue 20/05; milestone v2.2 (Webhook-First) iniciado após 6 fixes paliativos do dia 08/06 não cobrirem casos persistentes (553891500357 + 4 do 08/06)*
+*Last updated: 2026-07-30 — v2.2 (Webhook-First Grupo Membership) concluída 10/06; milestone v3.0 (Cobranças Asaas + Empresa-mãe) iniciada — ativar billing já portado + área Cobranças + notificações + implantação da empresa-mãe*
