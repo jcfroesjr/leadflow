@@ -70,7 +70,49 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 - Validated **RECOVERY-AQUEC-01**: Recovery aquec janela 6h (commit 0d55888)
 - Validated **RLS-HARD-01**: Migration 003 RLS hardening (commit 073c93f)
 
-## Active — Milestone v2.2 Webhook-First Grupo Membership
+## Active — Milestone v3.0 Cobranças (Asaas) + Empresa-mãe
+
+**Goal:** Ligar e completar a monetização do LeadFlow — ativar o billing Asaas já portado (a plataforma cobra as empresas), adicionar a área "Cobranças" no painel, notificações de cobrança da mensalidade, e implantar a empresa-mãe (a do dono) pra captar leads de venda do sistema.
+
+**Contexto:** o motor de billing JÁ EXISTE (`feature_billing_plataforma_asaas`, port AvalancheVendas — backend `app/services/billing/`, `routers/billing.py`, `webhook_plataforma.py`, `asaas_client.py`, migration `010`, `CadastroPage.tsx`), com gate OFF + grandfather. Esta milestone ATIVA + adiciona UI de gestão + notificações + implantação. NÃO reconstruir o motor.
+
+### Cat A: ATIVAÇÃO DO BILLING (BILL)
+
+- [ ] **BILL-01**: Migration `010_plataforma_billing.sql` rodada no Supabase (3 tabelas + seed preços R$297/R$2970 + grandfather empresas atuais = `active`)
+- [ ] **BILL-02**: Env Asaas central no backend web+scheduler (`ASAAS_CENTRAL_API_KEY`, `ASAAS_CENTRAL_AMBIENTE`, `ASAAS_CENTRAL_WEBHOOK_TOKEN`); `SUPABASE_ANON_KEY` conferido p/ resend e-mail
+- [ ] **BILL-03**: Webhook Asaas configurado (URL `/webhook/plataforma/asaas` + header `asaas-access-token` + eventos PAYMENT_CONFIRMED/RECEIVED, OVERDUE, REFUNDED, DELETED, SUBSCRIPTION_DELETED)
+- [ ] **BILL-04**: Fluxo `/cadastro` pago validado em SANDBOX (signup → checkout Asaas → pagamento → webhook → empresa `active`); dedup por `plataforma_webhook_events`
+- [ ] **BILL-05**: Confirmação de e-mail resolvida (SMTP no Supabase + Confirm email ON, ou `SIGNUP_REQUIRE_EMAIL_CONFIRM=0`)
+- [ ] **BILL-06**: Billing ATIVO em produção (ambiente Asaas prod) + CTA "Criar conta" → `app.leadcase.com.br/cadastro`; `BILLING_GATE_ENABLED` mantido OFF até validar
+
+### Cat B: ÁREA COBRANÇAS / UI (COBR)
+
+- [ ] **COBR-01**: Endpoint backend (super-admin) que agrega empresas + assinatura + status + últimos pagamentos (lê tabelas billing + Asaas)
+- [ ] **COBR-02**: Super-admin vê tela "Cobranças" listando todas as empresas com status (`active`/`past_due`/`suspended`/`pending_payment`), plano, valor, próximo vencimento
+- [ ] **COBR-03**: Tela destaca inadimplência (past_due/suspended) com contagem no topo
+- [ ] **COBR-04**: Super-admin abre detalhe de uma empresa e vê histórico de pagamentos (pagos/atrasados, valores, datas) + link da fatura Asaas
+- [ ] **COBR-05**: Acesso restrito ao super-admin (dono da plataforma) — não é visão por-empresa/tenant
+
+### Cat C: NOTIFICAÇÕES DE COBRANÇA (NOTIF)
+
+- [ ] **NOTIF-01**: Sistema envia lembrete (WhatsApp) N dias antes do vencimento da mensalidade → contato admin da empresa
+- [ ] **NOTIF-02**: Sistema envia aviso de atraso quando a assinatura vira `past_due`
+- [ ] **NOTIF-03**: Notificações idempotentes (não repetem no mesmo ciclo/fatura)
+- [ ] **NOTIF-04**: Configurável (dias de antecedência, on/off, texto da mensagem)
+
+### Cat D: IMPLANTAÇÃO EMPRESA-MÃE (IMPL)
+
+- [ ] **IMPL-01**: Empresa-mãe criada (nome, fuso, plano) + o dono como admin (membro papel=admin)
+- [ ] **IMPL-02**: `config_ia` — persona/nome_agente/nome_responsavel + `prompt_sistema` (vendendo o LeadFlow) + Q1/Q2/Q3 templates + empatia
+- [ ] **IMPL-03**: `config_agendamento` — horários, duração, plataforma reunião, confirmação D-1
+- [ ] **IMPL-04**: FPs (follow-ups de prospecção) configurados
+- [ ] **IMPL-05**: Webhook de captação criado + `mapeamento_campos`/`ordem_campos` (formulário de leads de venda)
+- [ ] **IMPL-06**: Instância WhatsApp conectada + webhook Evolution (`MESSAGES_UPSERT`) configurado
+- [ ] **IMPL-07**: Teste ponta-a-ponta — lead de venda entra → Q1→Q2→Q3→empatia→slots→agendamento
+
+---
+
+## Validated — Milestone v2.2 Webhook-First Grupo Membership (shippado 10/06)
 
 **Goal:** Eliminar falsos negativos persistentes do probe Evolution invertendo a fonte da verdade — webhook `GROUP_PARTICIPANTS_UPDATE` torna-se primario via tabela materializada `grupo_membership`, probe Evolution vira fallback com retry exponencial + cache curto.
 
