@@ -1,7 +1,7 @@
 # Roadmap — Leadflow Platform
 
 **Created:** 2026-05-03
-**Updated:** 2026-06-09 — Milestone v2.2 (Webhook-First Grupo Membership) adicionado (Fases 10-14)
+**Updated:** 2026-07-30 — Milestone v3.0 (Cobranças Asaas + Empresa-mãe) adicionado (Fases 15-18)
 
 ---
 
@@ -10,7 +10,8 @@
 - Concluido **v1.0 MVP — Frontend v2** — Phases 1-6 (shipped 2026-04-XX)
 - Concluido **v2.0 — Agente IA Atomic Processing** — Phases 1-3 (shipped ad-hoc 06/05)
 - Concluido **v2.1 — Grupo WhatsApp Robusto** — Phases 3-9 (shipped 20/05)
-- Em planejamento **v2.2 — Webhook-First Grupo Membership** — Phases 10-14
+- Concluido **v2.2 — Webhook-First Grupo Membership** — Phases 10-14 (shipped 10/06)
+- Em planejamento **v3.0 — Cobranças (Asaas) + Empresa-mãe** — Phases 15-18
 
 ---
 
@@ -72,159 +73,138 @@ Casos Karla, Crislaine, Patricia resolvidos. NAO REVERTER.
 
 </details>
 
+<details>
+<summary>v2.2 — Webhook-First Grupo Membership (Phases 10-14) — SHIPPED 10/06</summary>
+
+**Milestone Goal:** Inverter a fonte da verdade. Webhook `GROUP_PARTICIPANTS_UPDATE` escreve em tabela materializada `grupo_membership` (primaria). Probe Evolution vira fallback com retry exponencial async + cache curto 5min.
+
+### Phase 10: Schema + 3 paths webhook write + cache standalone (completed 2026-06-09)
+MEMB-01..04, MEMB-06, PROBE-CACHE-01 — Tabela `grupo_membership` + UPSERT em 3 paths + cache singleton.
+
+### Phase 11: `lead_in_group()` consumer + migrar fallback callers (completed 2026-06-09)
+MEMB-05, PROBE-COALESCE-01 — Funcao central tabela-primeira + migra 6 callsites + coalescing async.
+
+### Phase 12: Retry async + callers com margem (completed 2026-06-10)
+PROBE-RETRY-01, PROBE-RETRY-02 — APScheduler retry 30s/2min/5min com `max_age_seconds=600`.
+
+### Phase 13: LEAVE handler + FSM audit monotonico (completed 2026-06-10)
+LEAVE-01..03, FSM-AUDIT-01..03 — Webhook REMOVE marca `saiu_em` + transicoes monotonicas + audit `GSC:`.
+
+### Phase 14: Testes regressao + doc + observabilidade (completed 2026-06-10)
+TEST-V2-G1..G5, DOC-V2-G1..G2, OBS-V2-G1..G2 — Suite pytest 5 casos + memorias + healthcheck.
+
+Casos Ana Carla, Rosania, Fernanda, Valquiria resolvidos. TEST-V2-G5 (553891500357) blocked-pending-data. NAO REVERTER.
+
+</details>
+
 ---
 
-## v2.2 — Webhook-First Grupo Membership (Em planejamento)
+## v3.0 — Cobranças (Asaas) + Empresa-mãe (Em planejamento)
 
-**Milestone Goal:** Inverter a fonte da verdade. Webhook `GROUP_PARTICIPANTS_UPDATE` escreve em tabela materializada `grupo_membership` (primaria). Probe Evolution vira fallback com retry exponencial async + cache curto 5min. Elimina os 4+ casos persistentes de 08-09/06 (Ana Carla, Rosania, Fernanda, Valquiria + 553891500357) que os 6 fixes paliativos do 08/06 nao cobriram.
+**Milestone Goal:** Ligar e completar a monetização do LeadFlow. O MOTOR de billing Asaas já está construído (port AvalancheVendas, gate OFF + grandfather) — esta milestone **ATIVA** o motor (config/operacional, código leve), adiciona a **área "Cobranças"** no painel (código novo: super-admin), **notificações de cobrança** via WhatsApp (código novo: job scheduler), e implanta a **empresa-mãe** do dono (operacional: dados + config via playbook) pra captar leads de venda do próprio sistema.
 
-**Critical path:** Fase 10 (Schema + 3 paths webhook write + cache). Sem ela, todo o resto fica sem fundacao.
+**Critical path:** Phase 15 (ativar billing). Sem billing ativo e produzindo dados reais de assinatura, a área Cobranças (Phase 16) não tem o que exibir e as notificações (Phase 17) não têm status de assinatura pra disparar.
 
-**NAO REGREDIR (camadas defensivas mantidas ativas em todas as fases v2.2):**
-- AQUEC-FLOOR-01 (180s, commit 53bd05a) — defesa em profundidade contra Evolution lenta
-- ALERTA-GRUPO-01 (commit 07d7341) — sem alerta dentro do grupo
-- PROBE-BYPASS-01 (marker GRUPO_LEAD_ENTROU_CRIACAO, commit 96b72cc) — bypass <5min
-- GRUPO-REUSO-01 (commit 7e366bd) — valida acesso ao grupo antes de reusar (caso Fernanda)
-- RECOVERY-STARTUP-01 (commit ae2b141) — recoveries async no startup
-- RECOVERY-AQUEC-01 (commit 0d55888) — recovery aquec janela 6h
+**NÃO reconstruir o motor** — reusar o portado (`app/services/billing/`, `routers/billing.py`, `webhook_plataforma.py`, `asaas_client.py`, migration `010_plataforma_billing.sql`, `CadastroPage.tsx`).
+
+**NÃO REGREDIR:** todas as camadas defensivas v2.0/v2.1/v2.2 continuam ativas. `BILLING_GATE_ENABLED` mantido OFF até a ativação estar validada (grandfather das empresas atuais preservado).
 
 ## Phases
 
 **Phase Numbering:**
-- Integer phases (10, 11, 12, 13, 14): Planned milestone work
-- Decimal phases (10.1, 11.1): Urgent insertions (marked with INSERTED)
+- Integer phases (15, 16, 17, 18): Planned milestone work
+- Decimal phases (15.1, 16.1): Urgent insertions (marked with INSERTED)
 
-v2.1 terminou em Phase 9 — v2.2 continua numbering em **Phase 10** (nao reseta).
+v2.2 terminou em Phase 14 — v3.0 continua numbering em **Phase 15** (nao reseta).
 
-- [x] **Phase 10: Schema + 3 paths webhook write + cache standalone** - Tabela `grupo_membership` com `instance_key` + UPSERT em 3 paths (webhook ADD, MESSAGES_UPSERT, createGroup direct) + cache singleton (coalescing movido pra Fase 11)
- (completed 2026-06-09)
-- [x] **Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async** - Funcao central de leitura tabela-primeira + migra 6 callsites + asyncio.Lock coalescing
- (completed 2026-06-09)
-- [x] **Phase 12: Retry async + callers com margem** - APScheduler retry exponencial 30s/2min/5min com `max_age_seconds=600` absoluto + migra callers com margem temporal
- (completed 2026-06-10)
-- [x] **Phase 13: LEAVE handler + FSM audit monotonico** - Webhook REMOVE marca `saiu_em` + notif DM-first + transicoes estritamente monotonicas + audit log com `caller` obrigatorio
- (completed 2026-06-10)
-- [x] **Phase 14: Testes regressao + doc + observabilidade** - Suite pytest 5 casos motivadores + memorias + healthcheck endpoint (completed 2026-06-10)
+- [ ] **Phase 15: Ativar Billing Asaas** - Rodar migration `010`, setar env Asaas central + webhook, validar `/cadastro` pago sandbox→prod (motor já existe — ativação/config)
+- [ ] **Phase 16: Área Cobranças (Super-Admin)** - Endpoint de agregação + tela que lista empresas/assinaturas com status, inadimplência, valor/vencimento, histórico + link fatura Asaas
+- [ ] **Phase 17: Notificações de Cobrança (WhatsApp)** - Job scheduler que envia lembrete de vencimento + aviso de atraso pro admin da empresa, idempotente e configurável
+- [ ] **Phase 18: Implantação Empresa-mãe** - Criar a empresa do dono (persona/prompt/Q1-Q3/FPs/webhook/instância) pra captar e qualificar leads de venda do LeadFlow (operacional, via playbook)
 
 ## Phase Details
 
-### Phase 10: Schema + 3 paths webhook write + cache standalone
-**Goal**: Fundacao webhook-first. Tabela `grupo_membership` populada em tempo real via 3 paths independentes garante que `lead_in_group()` (Fase 11) ja encontre dados confiaveis ao consultar. Cache standalone reduz pressao em Evolution sem mudar callers existentes ainda. **Coalescing async movido pra Fase 11** (materializa com consumer).
-**Depends on**: Nothing (primeira fase v2.2 — fundacao)
-**Requirements**: MEMB-01, MEMB-02, MEMB-03, MEMB-04, MEMB-06, PROBE-CACHE-01
+### Phase 15: Ativar Billing Asaas
+**Goal**: Ligar o motor de billing já portado — novas empresas passam a pagar via Asaas pra se cadastrar, e o status da assinatura (active/past_due/etc) é atualizado automaticamente por webhook. É ativação + config (rodar migration, env, webhook, validar sandbox→prod), não construção de software.
+**Depends on**: Nothing (primeira fase v3.0 — desbloqueia dados reais de billing)
+**Requirements**: BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06
 **Success Criteria** (what must be TRUE):
-  1. Lead que entra via `POST /group/create` tem row em `grupo_membership` em <1s sem aguardar webhook (Path 3 — caso Ana Carla resolvido na fundacao)
-  2. Tabela `grupo_membership` tem coluna `instance_key` populada em todos os writes; query por instancia antiga retorna vazio quando empresa migrou (caso Fernanda nao regride)
-  3. Webhook `GROUP_PARTICIPANTS_UPDATE action=add` faz UPSERT idempotente comparando `messageTimestamp` do payload (re-delivery nao duplica linha; out-of-order respeitado)
-  4. Cache singleton `cachetools.TTLCache(maxsize=512, ttl=300)` + write-through invalidate em todo UPSERT (Pitfall 2: cache mascarando falha de persistencia eliminado)
-  5. RLS service_role-only ativo desde o deploy inicial — INSERT via anon key retorna 0 rows (verificavel via teste)
-**Plans**: 5 plans
-- [x] 10-01-PLAN.md — Wave 0 pre-deps: confirmar cachetools + localizar Path 2 callsite + parse messageTimestamp shape
-- [x] 10-02-PLAN.md — Wave 1 foundation: migration 004 (tabela + RLS + RPC) + helper upsert_grupo_membership + cache singleton
-- [x] 10-03-PLAN.md — Wave 2 Path 1: webhook GROUP_PARTICIPANTS_UPDATE add → UPSERT em grupo_membership
-- [x] 10-04-PLAN.md — Wave 2 Paths 2+3: MESSAGES_UPSERT @lid capture + createGroup direct write (caso Ana Carla)
-- [x] 10-05-PLAN.md — Wave 3 tests + healthcheck skinny + BUILD_VERSION bump + smoke RLS manual
-
-### Phase 11: `lead_in_group()` consumer + migrar fallback callers + coalescing async
-**Goal**: Inverter fonte da verdade nos callers criticos. Funcao central `lead_in_group()` consulta `grupo_membership` PRIMEIRO; probe Evolution so roda como fallback. Migra os 6 callsites de `verificar_lead_no_grupo` em `grupo_fallback.py` (linhas 251, 311, 337, 477, 624, 1173, 1256) para usar o novo consumer. Coalescing async via `asyncio.Lock` por chave materializa AQUI (movido da Fase 10), junto do consumer que dispara probes concorrentes.
-**Depends on**: Phase 10 (tabela + writes funcionando)
-**Requirements**: MEMB-05, PROBE-COALESCE-01
-**Success Criteria** (what must be TRUE):
-  1. `lead_in_group(empresa_id, telefone, grupo_jid, lid)` retorna `{in_group, source, last_event_at, instance_key_match}` consultando `grupo_membership` PRIMEIRO; so vai pro probe se row ausente OU `saiu_em != null`
-  2. Janela stale: se grupo criado <6min atras E sem row, fallback retorna `pending` (nao concluivo) em vez de False — permite Fase 12 enfileirar retry
-  3. Os 6 callsites em `grupo_fallback.py` chamam `lead_in_group()` em vez de `verificar_lead_no_grupo` direto; probe direto so permanece em endpoint admin para diagnostico
-  4. Quando `instance_key_match=False`, funcao trata como grupo orfao (caso Fernanda) e retorna sentinel que permite ao caller decidir criar novo grupo
-  5. `asyncio.Lock` por chave evita probe concorrente: 3 jobs paralelos pro mesmo grupo disparam 1 unica chamada HTTP Evolution (PROBE-COALESCE-01)
-  6. Logs `[MEMB-LOOKUP] source={membership|cache|probe|stale} grupo={jid} verdict={...}` aparecem em todas as consultas
-**Plans**: 4 plans
-- [x] 11-01-PLAN.md — Wave 1 foundation: lead_in_group() consumer + decision tree + asyncio.Lock coalescing per-chave em grupo_membership.py
-- [x] 11-02-PLAN.md — Wave 2 migracao: 7 substituicoes mecanicas em grupo_fallback.py (linhas 251/311/337/477/624/1173/1256) preservando PROBE-BYPASS-01 + ALERTA-GRUPO-01
-- [x] 11-03-PLAN.md — Wave 3 tests: 7 testes decision tree + 3 testes coalescing + 8 testes CI grep migration
-- [x] 11-04-PLAN.md — Wave 4 deploy: BUILD_VERSION bump + healthcheck endpoint estendido + smoke prod (CHECKPOINT)
-
-### Phase 12: Retry async + callers com margem
-**Goal**: Probe negativo inicial NAO conclui definitivo — enfileira retry async via APScheduler em 30s/2min/5min com `max_age_seconds=600` absoluto. Resolve race timing (caso Rosania T+138s) e evita jobs zumbi (caso Valquiria 47h late). Migra callers com margem temporal (notif pre-reuniao, timeout 30min FALLBACK) para usar retry async; aquec mantem sincrono mas consulta `grupo_membership` primeiro.
-**Depends on**: Phase 11 (`lead_in_group` existir)
-**Requirements**: PROBE-RETRY-01, PROBE-RETRY-02
-**Success Criteria** (what must be TRUE):
-  1. Probe negativo inicial nao conclui — enfileira retry async via APScheduler `add_job(trigger='date', run_date=NOW+30s)` com `id=f"probe_retry:{grupo_jid}:{telefone}:{attempt}"` + `replace_existing=True`
-  2. Retry handler verifica `now - enqueued_at < max_age_seconds (600s)` antes de executar; job velho descartado com log `[JOB_EXPIRED]` (caso Valquiria nao regride mesmo com retry adicionado)
-  3. Webhook que chegar entre tentativas (caso Rosania T+138s) faz retry consultar tabela primeiro, encontrar row, encerrar com sucesso silencioso sem chamar Evolution
-  4. Notif D-1 (`confirmacao_agendamento.py:291`) e notif pre-reuniao (`warmup_grupo.py`) migrados para `schedule_retry_on_negative=True`; aquec mantem sincrono (decisao "AGORA"). NOTA (research): `_executar_timeout_grupo_aguardando` NAO tem probe — so transiciona FSM; o segundo caller-com-margem real e a notif do warmup.
-  5. APScheduler em modo in-memory explicito (jobs perdidos em restart sao re-enfileirados via recovery startup baseado em estado DB)
-  6. `asyncio.create_task` naked PROIBIDO no retry path — todos os agendamentos passam por `scheduler.add_job` (evita silent task drop)
-**Plans**: 3 plans
-- [x] 12-01-PLAN.md — Wave 1: schedule_probe_retry() + _probe_retry_job() (max_age guard + table-first) + ativacao stub no STEP 5 de lead_in_group (PROBE-RETRY-01)
-- [x] 12-02-PLAN.md — Wave 2: migra 2 callers com margem (confirmacao D-1 + notif warmup) + recovery startup; aquec mantem sincrono (PROBE-RETRY-02)
-- [x] 12-03-PLAN.md — Wave 3: suite pytest test_probe_retry.py (Validation Architecture: scheduling, max_age Valquiria, table-first Rosania, callers)
-
-### Phase 13: LEAVE handler + FSM audit monotonico
-**Goal**: Fechar o ciclo de vida da membership. Webhook REMOVE marca `saiu_em` + insere marker `LEAD_SAIU_GRUPO`. Notif pre-reuniao e D-1 detectam `saiu_em != null` e redirecionam pro DM (nao grupo vazio). FSM transicoes estritamente monotonicas com argumento `caller` obrigatorio sem default — toda transicao gera audit log `GSC:{from}:{to}:{reason}:{caller}` em conversas.
-**Depends on**: Phase 10 (webhook handler existir), Phase 11 (`lead_in_group` consumir `saiu_em`)
-**Requirements**: LEAVE-01, LEAVE-02, LEAVE-03, FSM-AUDIT-01, FSM-AUDIT-02, FSM-AUDIT-03
-**Success Criteria** (what must be TRUE):
-  1. Webhook `GROUP_PARTICIPANTS_UPDATE action=remove` marca `grupo_membership.saiu_em = messageTimestamp` + insere marker `LEAD_SAIU_GRUPO:{grupo_jid}` em conversas (idempotente — sem `{ts}`, ts persiste em saiu_em) [amenda 2026-06-09]
-  2. Notif pre-reuniao e D-1 detectam `saiu_em != null` via `lead_in_group()` E enviam confirmacao via DM (nao grupo vazio) — caso lead-saiu nao perde confirmacao
-  3. FSM transicao `ATIVO->AGUARDANDO` BLOQUEADA sem flag `force=True` (so endpoint admin pode forcar); tentativas registram audit `BLOCKED:{reason}` mas nao mudam estado
-  4. `set_grupo_state()` exige argumento `caller` obrigatorio sem default — CI grep check garante que nenhum chamador passa "unknown" ou omite
-  5. Toda transicao FSM grava marker `GSC:{ag_id}:{from}:{to}:{reason}:{caller}` em conversas (prefixo `GSC:` evita colisao com `.like("GRUPO_STATE:%")`); query do dashboard `/admin/grupos` (`?timeline=true`) exibe timeline auditavel [amenda 2026-06-09]
-  6. Lead que saiu volta pra FSM `LEFT_GROUP` (novo estado terminal naquele agendamento); flag `LEFT_GROUP` no marker GSC diferencia de timeout normal
+  1. Migration `010_plataforma_billing.sql` rodada no Supabase: 3 tabelas billing existem, preços R$297/R$2970 seedados, empresas atuais grandfathered como `active` (nenhuma empresa em produção é interrompida)
+  2. Env Asaas central setado no web+scheduler (`ASAAS_CENTRAL_API_KEY`, `ASAAS_CENTRAL_AMBIENTE`, `ASAAS_CENTRAL_WEBHOOK_TOKEN`) e webhook Asaas configurado (`/webhook/plataforma/asaas` + header `asaas-access-token` + eventos PAYMENT_CONFIRMED/RECEIVED, OVERDUE, REFUNDED, DELETED, SUBSCRIPTION_DELETED)
+  3. Fluxo `/cadastro` validado em SANDBOX ponta-a-ponta: signup → checkout Asaas → pagamento → webhook → empresa vira `active`; reenvio do mesmo evento não dupla (dedup via `plataforma_webhook_events`)
+  4. Confirmação de e-mail resolvida (SMTP no Supabase + Confirm email ON, ou `SIGNUP_REQUIRE_EMAIL_CONFIRM=0`) — usuário recém-criado consegue logar
+  5. Billing ATIVO em produção (ambiente Asaas prod) com CTA "Criar conta" → `app.leadcase.com.br/cadastro`; `BILLING_GATE_ENABLED` mantido OFF até validação final, empresas atuais seguem operando
+**Plans**: TBD
 **UI hint**: yes
-**Plans**: 4 plans
-- [x] 13-01-PLAN.md — Wave 1 foundation: FSM monotonico (STATE_LEFT_GROUP + ALLOWED_TRANSITIONS) + caller obrigatorio + marker audit GSC: (FSM-AUDIT-01/02)
-- [x] 13-02-PLAN.md — Wave 2 LEAVE handler: webhook REMOVE marca saiu_em + LEAD_SAIU_GRUPO + FSM LEFT_GROUP + lead_in_group source='left_group' + D-1/notif DM redirect (LEAVE-01/02/03)
-- [x] 13-03-PLAN.md — Wave 2 migracao: 7 callsites set_grupo_state/transition_grupo_state com reason+caller + sweep script (FSM-AUDIT-03)
-- [x] 13-04-PLAN.md — Wave 3 tests + dashboard: test_fsm_monotonic + test_fsm_caller_ci + test_leave_handler + left_group decision + ?timeline=true em /admin/grupo/status
 
-### Phase 14: Testes regressao + doc + observabilidade
-**Goal**: Bloquear regressao dos 5 casos motivadores via suite pytest. Documentacao consolidada em memoria. Healthcheck endpoint detecta cache mascarando falha de persistencia. Conclui o ciclo: ninguem mexe em v2.2 sem que os 5 casos sigam protegidos.
-**Depends on**: Phase 10, 11, 12, 13 (toda a infra)
-**Requirements**: TEST-V2-G1, TEST-V2-G2, TEST-V2-G3, TEST-V2-G4, TEST-V2-G5, DOC-V2-G1, DOC-V2-G2, OBS-V2-G1, OBS-V2-G2
+### Phase 16: Área Cobranças (Super-Admin)
+**Goal**: Dar ao dono da plataforma uma visão única de gestão financeira — todas as empresas e suas assinaturas num painel, com destaque de inadimplência e detalhe de pagamentos. Código novo (endpoint de agregação + página frontend) que lê as tabelas de billing (populadas na Phase 15) + Asaas.
+**Depends on**: Phase 15 (precisa de dados de assinatura reais pra exibir)
+**Requirements**: COBR-01, COBR-02, COBR-03, COBR-04, COBR-05
 **Success Criteria** (what must be TRUE):
-  1. 5/5 casos regressao passing: TEST-V2-G1 (Ana Carla — Path 3 createGroup), TEST-V2-G2 (Rosania — retry async com max_age=600s), TEST-V2-G3 (Fernanda — instance_key mismatch), TEST-V2-G4 (Valquiria — job retry descartado por max_age)
-  2. TEST-V2-G5 (553891500357) marcado `blocked-pending-data` ate user fornecer trace completo (timestamps + payloads webhook + conversas); test stub criado mas pulado em CI ate dados chegarem
-  3. Memoria nova `sessao_2026-06-XX_grupo_membership_v2.md` + `grupo_membership_arquitetura.md` documentam inversao webhook-first; `agente_referencia_compilada.md` atualizado com tabela + `lead_in_group()` + retry async + FSM audit
-  4. Endpoint `/health/grupo-membership` retorna `{total_rows_24h, last_write_at, cache_size, cache_hit_rate, writes_per_source}` — operador detecta cache mascarando falha de persistencia (0 inserts via webhook por 30min em horario ativo gera alerta)
-  5. Logs estruturados `[MEMB-WRITE] source={webhook|createGroup|messages_upsert}`, `[MEMB-LOOKUP]`, `[PROBE-RETRY]`, `[GRUPO-STATE-CHANGE]` aparecem em todos os fluxos novos
-  6. 13 testes pytest da v2.1 (commit 6159af5) continuam passing (nao regredidos) + 5 novos = suite completa de 18 testes roda em <60s
-**Plans**: 3 plans
-- [x] 14-01-PLAN.md — Wave 1: suite regressao test_v2_regression.py (4 pass + 1 skip G5) + source-audit dos 4 log markers (TEST-V2-G1..G5, OBS-V2-G1)
-- [x] 14-02-PLAN.md — Wave 1: healthcheck +cache_hit_rate +total_rows_24h + BUILD_VERSION bump 2026-06-10-v2-2-completo (OBS-V2-G2)
-- [x] 14-03-PLAN.md — Wave 2: doc in-repo grupo_membership_v2.md + checklist memorias + gate suite completa 113 testes (DOC-V2-G1/G2)
+  1. Super-admin abre a tela "Cobranças" e vê todas as empresas listadas com status (`active`/`past_due`/`suspended`/`pending_payment`), plano, valor e próximo vencimento
+  2. A tela destaca inadimplência no topo — contagem de empresas em `past_due`/`suspended` visível de imediato
+  3. Super-admin abre o detalhe de uma empresa e vê o histórico de pagamentos (pagos/atrasados, valores, datas) + link direto da fatura Asaas
+  4. Um endpoint backend (super-admin) agrega empresas + assinatura + status + últimos pagamentos numa única resposta (lê tabelas billing + Asaas)
+  5. O acesso é restrito ao super-admin (dono da plataforma) — uma empresa comum/tenant não consegue abrir nem ver a área
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 17: Notificações de Cobrança (WhatsApp)
+**Goal**: Reduzir inadimplência e churn silencioso avisando a empresa pela WhatsApp antes e depois do vencimento da mensalidade. Código novo (job no scheduler + config), reusando a infra de envio WhatsApp existente e o status de assinatura da Phase 15.
+**Depends on**: Phase 15 (precisa do status de assinatura e vencimentos)
+**Requirements**: NOTIF-01, NOTIF-02, NOTIF-03, NOTIF-04
+**Success Criteria** (what must be TRUE):
+  1. N dias antes do vencimento da mensalidade, o contato admin da empresa recebe um lembrete por WhatsApp
+  2. Quando a assinatura vira `past_due`, o admin da empresa recebe um aviso de atraso por WhatsApp
+  3. As notificações são idempotentes — não se repetem no mesmo ciclo/fatura mesmo se o job rodar múltiplas vezes
+  4. As notificações são configuráveis — dias de antecedência, on/off e texto da mensagem ajustáveis sem alterar código
+**Plans**: TBD
+
+### Phase 18: Implantação Empresa-mãe
+**Goal**: Colocar o próprio LeadFlow pra vender LeadFlow — implantar a empresa do dono como um tenant real que capta leads de venda e os qualifica ponta-a-ponta com o agente IA. É trabalho operacional (criação de dados + config via playbook de implantação), não software a construir. Independente das outras fases — pode rodar em paralelo.
+**Depends on**: Nothing (operacional/independente — pode correr em paralelo com 15-17)
+**Requirements**: IMPL-01, IMPL-02, IMPL-03, IMPL-04, IMPL-05, IMPL-06, IMPL-07
+**Success Criteria** (what must be TRUE):
+  1. Empresa-mãe existe no LeadFlow (nome, fuso, plano) com o dono cadastrado como admin (membro papel=admin)
+  2. `config_ia` (persona/nome_agente/nome_responsavel + `prompt_sistema` vendendo o LeadFlow + Q1/Q2/Q3 + empatia) e `config_agendamento` (horários, duração, plataforma de reunião, confirmação D-1) estão preenchidos
+  3. FPs (follow-ups de prospecção) configurados para os leads de venda
+  4. Webhook de captação criado (com `mapeamento_campos`/`ordem_campos` do formulário de venda) + instância WhatsApp conectada + webhook Evolution (`MESSAGES_UPSERT`) configurado
+  5. Teste ponta-a-ponta valida: um lead de venda entra → Q1 → Q2 → Q3 → empatia → slots → agendamento, sem intervenção manual
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 10 -> 11 -> 12 -> 13 -> 14
+Phases 15 → 16 → 17 executam em ordem (16 e 17 dependem de 15). Phase 18 é operacional e independente — pode correr em paralelo.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 10. Schema + 3 paths webhook write + cache standalone | 5/5 | Complete    | 2026-06-09 |
-| 11. `lead_in_group()` consumer + migrar fallback callers | 4/4 | Complete    | 2026-06-09 |
-| 12. Retry async + callers com margem | 3/3 | Complete    | 2026-06-10 |
-| 13. LEAVE handler + FSM audit monotonico | 4/4 | Complete    | 2026-06-10 |
-| 14. Testes regressao + doc + observabilidade | 3/3 | Complete    | 2026-06-10 |
+| 15. Ativar Billing Asaas | 0/? | Not started | - |
+| 16. Área Cobranças (Super-Admin) | 0/? | Not started | - |
+| 17. Notificações de Cobrança (WhatsApp) | 0/? | Not started | - |
+| 18. Implantação Empresa-mãe | 0/? | Not started | - |
 
-## Phase Order Rationale (v2.2)
+## Phase Order Rationale (v3.0)
 
-1. **Phase 10 primeiro (CRITICAL PATH)** — Schema + 3 paths de escrita sao fundacao. Sem dados na tabela, nada do resto funciona. Cache + coalescing standalone (sem callers ainda) — zero risco de regressao na inversao. **Insight critico: Path 3 (createGroup direct write) resolve caso Ana Carla mesmo antes do consumer existir.**
-2. **Phase 11 depois** — `lead_in_group()` consumer migra os callers internos de `grupo_fallback.py` (auto-contidos, alto trafego, validacao rapida em <24h em prod).
-3. **Phase 12** — Retry assincrono so faz sentido com `lead_in_group()` ja em uso. Callers com margem temporal (notif, timeout) ganham `schedule_retry_on_negative=True`; aquec mantem sincrono.
-4. **Phase 13** — LEAVE handler + FSM audit. Adiciona complexidade nova (saiu_em consumers + estado LEFT_GROUP). Resolver entrada (Fases 10-12) primeiro elimina 80% dos casos motivadores.
-5. **Phase 14** — Testes + doc + observabilidade consolidam. Suite roda contra arquitetura final, nao mid-state (licao do v2.1 commit 6159af5).
+1. **Phase 15 primeiro (CRITICAL PATH)** — Ativar o billing desbloqueia os dados reais de assinatura. É pré-requisito de dados pras Phases 16 e 17. Código leve (ativação/config); o motor já existe.
+2. **Phase 16 depois** — A área Cobranças exibe o que o billing produz. Sem billing ativo (15) não há empresas/assinaturas/pagamentos pra listar.
+3. **Phase 17** — Notificações disparam a partir do status da assinatura (`past_due`) e dos vencimentos, que só existem depois de 15. Reusa infra WhatsApp existente.
+4. **Phase 18 (paralela)** — Implantação da empresa-mãe é operacional (dados + config via playbook), não depende do billing nem da UI. Pode rodar a qualquer momento, inclusive em paralelo com 15-17.
 
 ---
 
 ## Proximo passo imediato
 
 ```
-/gsd-plan-phase 10
+/gsd-plan-phase 15
 ```
 
-Gera plano detalhado da Fase 10 (schema + 3 paths webhook write + cache standalone).
+Gera o plano detalhado da Fase 15 (ativar billing Asaas). Phase 18 (empresa-mãe) pode ser iniciada em paralelo via `/gsd-plan-phase 18` por ser operacional e independente.
 
 ---
 
 *Roadmap criado: 2026-05-03 — milestone v2.0*
 *Atualizado: 2026-05-20 — milestone v2.1 Grupo Robusto (Fases 3-9)*
 *Atualizado: 2026-06-09 — milestone v2.2 Webhook-First (Fases 10-14)*
+*Atualizado: 2026-07-30 — milestone v3.0 Cobranças Asaas + Empresa-mãe (Fases 15-18)*

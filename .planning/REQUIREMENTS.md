@@ -165,12 +165,26 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 
 ## Future (proximos milestones)
 
+- Empresa cobrando os PRÓPRIOS clientes finais dela via Asaas (sub-billing por-empresa)
+- Gateway de pagamento além do Asaas (Stripe/PayPal)
+- Dunning automático complexo (retry cartão, downgrade automático)
+- Metered / usage billing (cobrança por uso)
 - Coluna `leads.lid_whatsapp` (se >100 leads com @lid persistido, marker pode pesar)
 - Endpoint Evolution alternativo (`checkNumberStatus`) como fallback de probe
 - Dashboard frontend pra `/admin/grupo/status` (hoje so JSON)
 - Suite testes T1-T8 do v2.0 (audio + queue regression)
 - Multi-instance backend (advisory locks Postgres)
 - WebSocket / SSE realtime
+
+## Out of Scope (milestone v3.0)
+
+| Feature | Reason |
+|---------|--------|
+| Empresa cobrando os proprios clientes finais dela via Asaas | Nesta milestone so plataforma -> empresas |
+| Gateway alem do Asaas (Stripe/PayPal/etc) | So Asaas nesta milestone |
+| Reescrita do motor de billing portado do AvalancheVendas | So ativar + UI + notificacoes em volta |
+| Metered / usage billing | So assinatura fixa (mensal R$297 / anual R$2970) |
+| Dunning automatico complexo (retry cartao, downgrade auto) | So notificacao + status de inadimplencia |
 
 ## Out of Scope (milestone v2.2)
 
@@ -202,39 +216,72 @@ Phases 3-9 entregues em 20/05/2026 (commits ac301fd, 6b0295b, 207a3a9, 0e4c335, 
 | (ADMIN-03..04 frontend) | Fase 8 | shippado (8d9fe5c + f97686c) |
 | TEST-G1..G6 + DOC-G1..G2 + OBS-G1 | Fase 9 | commitado (6159af5) |
 
-### v2.2 (Fases 10-14 — em planejamento)
+### v2.2 (Fases 10-14 — shippadas 10/06)
 
 | Requirement | Phase | Plan | Status |
 |-------------|-------|------|--------|
-| MEMB-01 | Fase 10 | TBD | Pending |
-| MEMB-02 | Fase 10 | TBD | Pending |
-| MEMB-03 | Fase 10 | TBD | Pending |
-| MEMB-04 | Fase 10 | TBD | Pending |
-| MEMB-06 | Fase 10 | TBD | Pending |
-| PROBE-CACHE-01 | Fase 10 | TBD | Pending |
-| MEMB-05 | Fase 11 | 11-01, 11-02 | Planned |
-| PROBE-COALESCE-01 | Fase 11 (movido da 10 em 09/06) | 11-01 | Planned |
-| (migracao 6 callsites grupo_fallback.py) | Fase 11 | 11-02 | Planned |
-| PROBE-RETRY-01 | Fase 12 | TBD | Pending |
-| PROBE-RETRY-02 | Fase 12 | TBD | Pending |
-| LEAVE-01 | Fase 13 | TBD | Pending |
-| LEAVE-02 | Fase 13 | TBD | Pending |
-| LEAVE-03 | Fase 13 | TBD | Pending |
-| FSM-AUDIT-01 | Fase 13 | TBD | Pending |
-| FSM-AUDIT-02 | Fase 13 | TBD | Pending |
-| FSM-AUDIT-03 | Fase 13 | TBD | Pending |
-| TEST-V2-G1 | Fase 14 | TBD | Pending |
-| TEST-V2-G2 | Fase 14 | TBD | Pending |
-| TEST-V2-G3 | Fase 14 | TBD | Pending |
-| TEST-V2-G4 | Fase 14 | TBD | Pending |
-| TEST-V2-G5 | Fase 14 | TBD | blocked-pending-data (trace 553891500357) |
-| DOC-V2-G1 | Fase 14 | TBD | Pending |
-| DOC-V2-G2 | Fase 14 | TBD | Pending |
-| OBS-V2-G1 | Fase 14 | TBD | Pending |
-| OBS-V2-G2 | Fase 14 | TBD | Pending |
+| MEMB-01 | Fase 10 | 10-02 | shippado |
+| MEMB-02 | Fase 10 | 10-03 | shippado |
+| MEMB-03 | Fase 10 | 10-04 | shippado |
+| MEMB-04 | Fase 10 | 10-04 | shippado |
+| MEMB-06 | Fase 10 | 10-02 | shippado |
+| PROBE-CACHE-01 | Fase 10 | 10-02 | shippado |
+| MEMB-05 | Fase 11 | 11-01, 11-02 | shippado |
+| PROBE-COALESCE-01 | Fase 11 (movido da 10 em 09/06) | 11-01 | shippado |
+| (migracao 6 callsites grupo_fallback.py) | Fase 11 | 11-02 | shippado |
+| PROBE-RETRY-01 | Fase 12 | 12-01 | shippado |
+| PROBE-RETRY-02 | Fase 12 | 12-02 | shippado |
+| LEAVE-01 | Fase 13 | 13-02 | shippado |
+| LEAVE-02 | Fase 13 | 13-02 | shippado |
+| LEAVE-03 | Fase 13 | 13-02 | shippado |
+| FSM-AUDIT-01 | Fase 13 | 13-01 | shippado |
+| FSM-AUDIT-02 | Fase 13 | 13-01 | shippado |
+| FSM-AUDIT-03 | Fase 13 | 13-03 | shippado |
+| TEST-V2-G1 | Fase 14 | 14-01 | shippado |
+| TEST-V2-G2 | Fase 14 | 14-01 | shippado |
+| TEST-V2-G3 | Fase 14 | 14-01 | shippado |
+| TEST-V2-G4 | Fase 14 | 14-01 | shippado |
+| TEST-V2-G5 | Fase 14 | 14-01 | blocked-pending-data (trace 553891500357) |
+| DOC-V2-G1 | Fase 14 | 14-03 | shippado |
+| DOC-V2-G2 | Fase 14 | 14-03 | shippado |
+| OBS-V2-G1 | Fase 14 | 14-01 | shippado |
+| OBS-V2-G2 | Fase 14 | 14-02 | shippado |
 
 **Coverage check:** 24/24 requirements v2.2 mapeados (100%). Nenhum orfao. Nenhuma duplicacao.
 
+### v3.0 (Fases 15-18 — em planejamento)
+
+| Requirement | Phase | Plan | Status |
+|-------------|-------|------|--------|
+| BILL-01 | Fase 15 | TBD | Pending |
+| BILL-02 | Fase 15 | TBD | Pending |
+| BILL-03 | Fase 15 | TBD | Pending |
+| BILL-04 | Fase 15 | TBD | Pending |
+| BILL-05 | Fase 15 | TBD | Pending |
+| BILL-06 | Fase 15 | TBD | Pending |
+| COBR-01 | Fase 16 | TBD | Pending |
+| COBR-02 | Fase 16 | TBD | Pending |
+| COBR-03 | Fase 16 | TBD | Pending |
+| COBR-04 | Fase 16 | TBD | Pending |
+| COBR-05 | Fase 16 | TBD | Pending |
+| NOTIF-01 | Fase 17 | TBD | Pending |
+| NOTIF-02 | Fase 17 | TBD | Pending |
+| NOTIF-03 | Fase 17 | TBD | Pending |
+| NOTIF-04 | Fase 17 | TBD | Pending |
+| IMPL-01 | Fase 18 | TBD | Pending |
+| IMPL-02 | Fase 18 | TBD | Pending |
+| IMPL-03 | Fase 18 | TBD | Pending |
+| IMPL-04 | Fase 18 | TBD | Pending |
+| IMPL-05 | Fase 18 | TBD | Pending |
+| IMPL-06 | Fase 18 | TBD | Pending |
+| IMPL-07 | Fase 18 | TBD | Pending |
+
+**Coverage check:** 22/22 requirements v3.0 mapeados (100%). Nenhum orfao. Nenhuma duplicacao.
+- BILL-01..06 (6) → Fase 15
+- COBR-01..05 (5) → Fase 16
+- NOTIF-01..04 (4) → Fase 17
+- IMPL-01..07 (7) → Fase 18
+
 ---
 
-*Last updated: 2026-06-09 — v2.1 entregue 20/05; v2.2 (Webhook-First Grupo Membership) Traceability preenchida pelo roadmapper (Fases 10-14)*
+*Last updated: 2026-07-30 — v2.2 shippada 10/06; v3.0 (Cobranças Asaas + Empresa-mãe) Traceability preenchida pelo roadmapper (Fases 15-18)*

@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: — Cobranças (Asaas) + Empresa-mãe
-status: defining_requirements
+status: roadmap_ready
 last_updated: "2026-07-30"
 last_activity: 2026-07-30
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,163 +17,118 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 15 — Ativar Billing Asaas (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-30 — Milestone v3.0 (Cobranças Asaas + Empresa-mãe) started
+Status: Roadmap pronto — aguardando `/gsd-plan-phase 15`
+Last activity: 2026-07-30 — Roadmap v3.0 criado (Fases 15-18)
+
+Progress: [░░░░░░░░░░] 0% (0/4 fases)
 
 ## Active Milestone
 
-**v2.2 — Identificacao Definitiva de Lead no Grupo (Webhook-First)**
+**v3.0 — Cobranças (Asaas) + Empresa-mãe**
 
-**Goal:** Inverter a fonte da verdade. Webhook GROUP_PARTICIPANTS_UPDATE escreve em tabela materializada `grupo_membership` (primaria). Probe Evolution vira fallback com retry exponencial + cache curto.
+**Goal:** Ligar e completar a monetização do LeadFlow — ativar o billing Asaas já portado (plataforma cobra as empresas), adicionar a área "Cobranças" no painel, notificações de cobrança da mensalidade via WhatsApp, e implantar a empresa-mãe (a do dono) pra captar leads de venda do próprio sistema.
 
-**Phases planejadas:** Fase 10-14 (continua numbering — v2.1 terminou em Fase 9).
+**Contexto-chave:** o MOTOR de billing JÁ EXISTE (port AvalancheVendas — `app/services/billing/`, `routers/billing.py`, `webhook_plataforma.py`, `asaas_client.py`, migration `010_plataforma_billing.sql`, `CadastroPage.tsx`), gate OFF + grandfather. Esta milestone ATIVA + adiciona UI + notificações + implantação. NÃO reconstruir o motor.
 
-**Casos motivadores (sessao 08-09/06):**
+**Phases planejadas:** Fase 15-18 (continua numbering — v2.2 terminou em Fase 14).
 
-- Ana Carla 5514998151089 (08/06 08:31) — entrou direto na createGroup, probe T+60s viu False, aquec foi pro DM
-- Rosania 5562984551622 (08/06 23:57) — webhook chegou T+138s, aquec ja tinha falhado em T+60s
-- Fernanda 5551999532715 (07/06) — grupo orfao de instancia antiga (bia-rejane) reusado
-- Valquiria 5582981291203 (06/06) — aquec #4 falhou, recovery reagendou 47h depois (corrigido em 0d55888 mas e paliativo)
-- 553891500357 (09/06) — caso reportado pelo user, persiste mesmo apos 6 fixes (trace pendente do user pra TEST-V2-G5)
+## Phase Sequence v3.0
 
-## Phase Sequence v2.2
+| Phase | Goal | Requirements | Depends on | Status |
+|-------|------|--------------|------------|--------|
+| 15 | Ativar Billing Asaas (migration 010 + env + webhook + validar cadastro pago sandbox→prod) | BILL-01..06 | — (critical path) | Not started |
+| 16 | Área Cobranças super-admin (endpoint agregação + tela: status/inadimplência/histórico/fatura) | COBR-01..05 | Phase 15 | Not started |
+| 17 | Notificações de cobrança WhatsApp (lembrete vencimento + aviso atraso, idempotente, configurável) | NOTIF-01..04 | Phase 15 | Not started |
+| 18 | Implantação empresa-mãe (persona/prompt/Q1-Q3/FPs/webhook/instância + teste ponta-a-ponta) | IMPL-01..07 | — (operacional, paralelo) | Not started |
 
-| Phase | Goal | Requirements | Status |
-|-------|------|--------------|--------|
-| 10 | Schema + 3 paths webhook write + cache standalone | MEMB-01..04, MEMB-06, PROBE-CACHE-01, PROBE-COALESCE-01 | Not started |
-| 11 | `lead_in_group()` consumer + migrar fallback callers | MEMB-05 (+ migra 6 callsites grupo_fallback.py) | Not started |
-| 12 | Retry async + callers com margem | PROBE-RETRY-01, PROBE-RETRY-02 | Not started |
-| 13 | LEAVE handler + FSM audit monotonico | LEAVE-01..03, FSM-AUDIT-01..03 | Not started |
-| 14 | Testes regressao + doc + observabilidade | TEST-V2-G1..G5, DOC-V2-G1..G2, OBS-V2-G1..G2 | Not started |
+**Execução:** 15 → 16 → 17 em ordem (16/17 dependem de dados do billing). Phase 18 é operacional e independente — pode correr em paralelo com 15-17.
 
 ## Performance Metrics
 
 | Metric | Target | Current |
 |--------|--------|---------|
-| Coverage requisitos v2.2 | 100% (24/24) | 100% (24/24) mapped |
-| Casos regressao bloqueados | 5/5 | 4/5 (G5 blocked-pending-data) |
-| Nao regredir fixes 08/06 | 6/6 | 6/6 (todos mantidos ativos) |
-| Nova dependencia stack | <2 | 1 (`cachetools>=5.5.0`) |
-| Phase 11 P11-02 | 25 | 4 tasks | 1 files |
-| Phase 11 P03 | 45 | 4 tasks | 4 files |
-| Phase 11 P11-04 | 15 | 4 tasks | 2 files |
-| Phase 12 P01 | 5 | 3 tasks | 1 files |
-| Phase 12 P12-02 | 10 | 3 tasks | 4 files |
-| Phase 12-retry-async-callers-com-margem P03 | 8min | 3 tasks | 1 files |
-| Phase 13 P01 | 7 | 2 tasks | 2 files |
-| Phase 13-leave-handler-fsm-audit-monotonico P02 | 25 | 3 tasks | 4 files |
-| Phase 13-leave-handler-fsm-audit-monotonico P03 | 5min | 3 tasks | 4 files |
-| Phase 13-leave-handler-fsm-audit-monotonico P04 | 20min | 3 tasks | 4 files |
-| Phase 14-testes-regressao-doc-observabilidade P14-01 | 3min | 2 tasks | 1 files |
-| Phase 14-testes-regressao-doc-observabilidade P02 | 5 | 2 tasks | 2 files |
-| Phase 14-testes-regressao-doc-observabilidade P14-03 | 5 | 2 tasks | 1 files |
+| Coverage requisitos v3.0 | 100% (22/22) | 100% (22/22) mapped |
+| Fases | 4 | 0/4 completas |
+| Reuso motor billing (não reconstruir) | 100% | pendente (Phase 15) |
+| Empresa-mãe qualifica lead ponta-a-ponta | 1 teste E2E | pendente (Phase 18) |
 
 ## Accumulated Context (preservado entre milestones)
 
-### v2.0 Validated em prod (ad-hoc, sem ciclo GSD)
+### v3.0 — Infra existente a REUSAR (não reinventar)
 
-- Validated Lock atomico (`processing_locks` + `acquire/release/cleanup`)
-- Validated Dedup universal (`send_text_uma_vez` + `OFERTA_ATIVA` + unique index conversas)
-- Validated Slot-pick deterministico (build 2026-05-03 em prod)
+- **Motor billing (port AvalancheVendas, gate OFF + grandfather):**
+  - `app/services/billing/` — lógica de assinatura/planos
+  - `app/routers/billing.py` — endpoints de billing
+  - `app/routers/webhook_plataforma.py` — handler `/webhook/plataforma/asaas` (dedup via `plataforma_webhook_events`)
+  - `app/services/asaas_client.py` — client Asaas (sandbox + prod)
+  - `migrations/010_plataforma_billing.sql` — 3 tabelas + seed preços R$297/R$2970 + grandfather empresas atuais
+  - `CadastroPage.tsx` (frontend) — fluxo `/cadastro` pago (pay-first, sem trial)
+- **Infra WhatsApp de envio** (reusar em NOTIF): senders existentes do agente + Evolution
+- **Playbook de implantação** (reusar em IMPL): `playbook_implantacao_empresa.md` + `onboarding_aplicar_template.md` (TEMPLATE Rejane 6213bf16)
+- **Multi-tenant:** `empresa_id` em todas as entidades; `config_ia`/`config_agendamento`/`config_apis` por empresa
 
-### v2.1 Validated (entregue 20/05) — NAO REVERTER
+### Flags / envs a configurar (Phase 15)
 
-- Validated Phase 3-4: Captura `@lid` via GROUP_PARTICIPANTS_UPDATE + MESSAGES_UPSERT (ac301fd, 6b0295b)
-- Validated Phase 5: Endpoints admin `/admin/grupo/forcar-revalidacao` + `/admin/grupo/status` (207a3a9)
-- Validated Phase 6: Alerta LEAD_LID + delay 180s (0e4c335)
-- Validated Phase 7: qualificacao_lock multi-template antes de criar grupo (0717e1c)
-- Validated Phase 8: Auth bridge JWT + Dashboard frontend `/admin/grupos` (8d9fe5c + f97686c)
-- Validated Phase 9: Suite 13 testes pytest regressao (6159af5)
+- `ASAAS_CENTRAL_API_KEY`, `ASAAS_CENTRAL_AMBIENTE`, `ASAAS_CENTRAL_WEBHOOK_TOKEN` (web + scheduler)
+- `SUPABASE_ANON_KEY` conferido (resend e-mail)
+- Confirmação e-mail: SMTP no Supabase + Confirm email ON, OU `SIGNUP_REQUIRE_EMAIL_CONFIRM=0`
+- `BILLING_GATE_ENABLED` — mantido OFF até validação final (grandfather preservado)
+- Webhook Asaas: `/webhook/plataforma/asaas` + header `asaas-access-token` + eventos PAYMENT_CONFIRMED/RECEIVED, OVERDUE, REFUNDED, DELETED, SUBSCRIPTION_DELETED
+- Domínios: `app.leadcase.com.br/cadastro` (CTA "Criar conta")
 
-### Camadas defensivas grupo (18-19/05) — NAO REVERTER
+### Out of Scope v3.0 (não fazer)
 
-- Validated Fase 1 18/05: removida presuncao `@lid=True` (4 patches: evolution.py:251, grupo_fallback.py:524, agente.py:8847, leads.py:73)
-- Validated Fase 4 18/05: regra unificada probe Evolution + FSM (AND) em aquec/notif/D-1
-- Validated Fix 19/05 commit ee132b9: FSM=ATIVO herdado sempre revalida via probe live
-- Validated Fix 19/05: convite nativo nominal com `nome_responsavel` configuravel
-- Validated Selador `qualificacao_lock.py` 18/05 (Q1+Q2+Q3+empatia ao virar agendado)
-- Validated Guard webhook 18/05: nao cria lead fake se telefone desconhecido
-- Validated Whitelist `safety_net` 18/05: 23 motivos
-- Validated Pipeline kanban Fase 3 18/05: colunas `agendamento_confirmado` + `no_show`
+- Empresa cobrando os PRÓPRIOS clientes finais dela via Asaas (só plataforma→empresas nesta milestone)
+- Gateway além do Asaas (Stripe/PayPal)
+- Reescrita do motor de billing (só ativar + UI + notificações em volta)
+- Metered/usage billing (só assinatura fixa mensal/anual)
+- Dunning automático complexo (retry cartão, downgrade auto) — só notificação + status de inadimplência
 
-### Sessao 08-09/06 — 6 fixes paliativos (NAO REVERTER, v2.2 substitui a base mas mantem estas camadas)
+### Marcos anteriores — NÃO REGREDIR
 
-- Validated MIN_FLOOR_SEG 30s->180s (commit 53bd05a) — atrasa primeiro aquec pra Evolution propagar
-- Validated Remove alerta grupo "lead nao entrou" (commit 07d7341)
-- Validated Marker GRUPO_LEAD_ENTROU_CRIACAO + bypass probe <5min (commit 96b72cc)
-- Validated Valida acesso ao grupo antes de reusar (commit 7e366bd) — fix caso Fernanda
-- Validated Recoveries startup async (commit ae2b141) — fix backend bloqueado 10+ min
-- Validated Recovery aquec janela 6h (commit 0d55888) — fix caso Valquiria
+- v1.0 Frontend v2 (Phases 1-6) — em prod
+- v2.0 Agente IA Atomic Processing (Lock/Dedup/Slot-pick) — em prod
+- v2.1 Grupo Robusto (Phases 3-9) — shippado 20/05
+- v2.2 Webhook-First Grupo Membership (Phases 10-14) — shippado 10/06 (tabela `grupo_membership`, retry async, FSM audit `GSC:`)
+- Todas as camadas defensivas 08/06 (6 fixes paliativos) — mantidas ativas
 
-### Outros do dia 08/06
-
-- Validated Reconexao instancia Rejane (bia-rejane -> rejane-leal-mentora, novo evolution_key 75818F69)
-- Validated Migration RLS 003: processing_locks/convites_pendentes ENABLE + v_agendamentos_painel SECURITY INVOKER (commit 073c93f)
-
-### Infra existente (nao reinventar em v2.2 — so ampliar)
-
-- `app/services/lock.py` — acquire/release/cleanup (v2.0)
-- `app/services/grupo_state.py` — FSM AGUARDANDO/FALLBACK_1_1/ATIVO + transition guards (v2.2 endurece em Fase 13)
-- `app/services/grupo_fallback.py:177` — `ativar_fallback_se_necessario` (entry point principal; Fase 11 migra 6 callsites)
-- `app/services/qualificacao_lock.py` — `popular_qs_se_faltando`
-- `app/routers/grupo_webhook.py` — `GROUP_PARTICIPANTS_UPDATE` handler (Fase 10 escreve em `grupo_membership`)
-- 23+ markers em `conversas` com unique constraint pra idempotencia
-
-### Casos reais resolvidos (consultar memorias)
-
-**v2.0/v2.1:**
-
-- Caca 03/05, Andressa 04/05, Luciane 11/05, Vanusa 13/05, Luciane 18-19/05, Karla 20/05, Patricia 20/05
-
-**08/06 (motivadores v2.2 — em escopo):**
-
-- Ana Carla, Rosania, Fernanda (grupo orfao), Valquiria (recovery 47h late), Rosangela (video->texto erro user), 553891500357 (caso atual)
-
-## Decisions Log v2.2
+## Decisions Log v3.0
 
 | Decision | Rationale | When |
 |----------|-----------|------|
-| Tabela dedicada `grupo_membership` em vez de marker em conversas | Relacao N:N (lead x grupo), queries por grupo_jid eficientes, suporta REMOVE/saiu_em explicito | 2026-06-09 |
-| Webhook = fonte primaria, probe = fallback | v2.1 manteve probe como primario e falhou em 4+ casos do 08/06 | 2026-06-09 |
-| Probe com retry exponencial 30s/2min/5min async via APScheduler | Probe sincrono nao da tempo pra Evolution propagar | 2026-06-09 |
-| `max_age_seconds=600` absoluto no retry handler | Cobre Rosania + Valquiria (jobs zumbi 47h late) | 2026-06-09 |
-| `instance_key` column no schema | Caso Fernanda nao regride (grupo orfao de instancia antiga) | 2026-06-09 |
-| 3 paths de escrita (webhook ADD + MESSAGES_UPSERT + createGroup direct) | Caso Ana Carla repete sem Path 3 | 2026-06-09 |
-| Cache in-memory `cachetools.TTLCache` (nao Redis) | Single-worker Easypanel; 5-10 probes/min; in-memory suficiente | 2026-06-09 |
-| FSM `caller` argumento obrigatorio sem default | CI grep check garante audit completo | 2026-06-09 |
-| GSC: prefix (not GRUPO_STATE_CHANGE:) para audit marker | Evita colisao com .like("GRUPO_STATE:%") em get_grupo_state | 2026-06-10 |
-| LEFT_GROUP e estado terminal real (nao FALLBACK_1_1) | Lead saiu nao e fallback — e estado definitivo; monotonia exige terminal | 2026-06-10 |
-| set_grupo_state escreve 2 markers: legacy GRUPO_STATE: + GSC: audit | Backward compat com get_grupo_state + audit trail completo | 2026-06-10 |
-| Continua phase numbering — v2.2 comeca em Fase 10 | v2.1 terminou em Fase 9, timeline continua mais facil de rastrear | 2026-06-09 |
-| Sem backfill retroativo de `grupo_membership` | Grupos antigos seguem com markers atuais | 2026-06-09 |
-| TEST-V2-G5 (553891500357) marcado `blocked-pending-data` | User precisa fornecer trace completo do incidente | 2026-06-09 |
+| Continua phase numbering — v3.0 começa em Fase 15 | v2.2 terminou em Fase 14; timeline contínua mais fácil de rastrear | 2026-07-30 |
+| 1 fase por categoria (BILL/COBR/NOTIF/IMPL) | Categorias são fronteiras de entrega coerentes e independentes; sem split artificial | 2026-07-30 |
+| BILL primeiro (critical path) | Ativar billing produz os dados de assinatura que COBR exibe e NOTIF consome | 2026-07-30 |
+| IMPL (empresa-mãe) como fase paralela/independente | Operacional (dados + config via playbook), não depende de billing nem UI | 2026-07-30 |
+| NÃO reconstruir o motor de billing | Já portado do AvalancheVendas; Phase 15 é ativação/config, não construção | 2026-07-30 |
+| `BILLING_GATE_ENABLED` OFF até validar | Grandfather das empresas em produção preservado durante a ativação | 2026-07-30 |
 
 ## Gaps / TODOs
 
-- **TEST-V2-G5 trace pendente** — user precisa fornecer timestamps + payloads webhook + conversas do 553891500357 antes da Fase 14 fechar
-- **supabase-py `on_conflict` em partial unique index** — spike de 5min antes do schema final da Fase 10; fallback e RPC function SQL
-- **`instance_key` source of truth** — confirmar onde mora (`empresas.instance_key_atual` vs `config_apis.evolution_key`); pode exigir column add em Fase 10
-- **Callsite exato do createGroup response (Path 3)** — identificar em kickoff Fase 10 (provavelmente `grupo_fallback.py` criacao ou helper dedicado)
-- **APScheduler persistence in-memory vs Postgres jobstore** — Fase 12 decide explicitamente; default seguro e in-memory + reschedule no startup
+- **`instance_key`/instância WhatsApp da empresa-mãe** — decidir número/instância dedicada antes da Fase 18 (IMPL-06)
+- **SMTP Supabase vs flag** — decidir em Phase 15 (BILL-05) qual caminho de confirmação de e-mail
+- **Sandbox Asaas** — garantir credenciais sandbox antes de BILL-04; prod só após validação
+- **Contato admin p/ notificação** — confirmar de onde vem o telefone do admin da empresa (Phase 17, NOTIF-01)
+- **Prompt de venda da empresa-mãe** — redigir `prompt_sistema` vendendo o LeadFlow (Phase 18, IMPL-02)
 
 ## Next Action
 
-1. `/gsd-plan-phase 10` — decompor Fase 10 em plans executaveis
-2. Spike inicial 5min: validar supabase-py `on_conflict` em partial unique index antes do schema final
-3. Confirmar `instance_key` source of truth com user
-4. Execute Fase 10 — schema + 3 paths webhook write + cache
+1. `/gsd-plan-phase 15` — decompor a Fase 15 (ativar billing Asaas) em plans executáveis
+2. Em paralelo: `/gsd-plan-phase 18` — empresa-mãe é operacional/independente
+3. Antes de BILL-04: garantir credenciais sandbox Asaas + decidir caminho de confirmação de e-mail (BILL-05)
 
 ## Session Continuity
 
 **Para retomar de outra sessao:**
 
-- ROADMAP.md tem todas as 5 fases v2.2 com success criteria observaveis
-- REQUIREMENTS.md tem traceability MEMB-* / PROBE-* / LEAVE-* / FSM-AUDIT-* / TEST-V2-* / DOC-V2-* / OBS-V2-* mapeados
-- research/ tem SUMMARY + STACK + FEATURES + ARCHITECTURE + PITFALLS (consultar antes de mexer em codigo)
-- Camadas defensivas 08/06 (6 fixes) — NAO REGREDIR em nenhuma fase
+- ROADMAP.md tem as 4 fases v3.0 (15-18) com success criteria observáveis
+- REQUIREMENTS.md tem a Traceability v3.0 (BILL/COBR/NOTIF/IMPL) mapeada — 22/22
+- Motor de billing JÁ EXISTE (port AvalancheVendas) — Phase 15 ATIVA, não reconstrói
+- Camadas defensivas v2.0/v2.1/v2.2 + fixes 08/06 — NÃO REGREDIR
+- Memórias relevantes: `feature_billing_plataforma_asaas.md`, `playbook_implantacao_empresa.md`, `onboarding_aplicar_template.md`
 
 ---
 
-*Last updated: 2026-06-09 — Roadmap v2.2 criado, aguardando `/gsd-plan-phase 10`*
+*Last updated: 2026-07-30 — Roadmap v3.0 criado (Fases 15-18), aguardando `/gsd-plan-phase 15`*
