@@ -1,7 +1,8 @@
 # Esqueleto em runtime — propagação atômica da lógica de agendamento
 
 **Data:** 2026-08-05
-**Escopo:** `config_ia.prompt_sistema` e `app/services/wizard/{esqueleto,montador}.py`
+**Escopo:** `config_ia.prompt_sistema`, `app/services/wizard/{esqueleto,montador}.py` e as
+frases de voz hardcoded em `app/routers/agente.py` (§3.6)
 **Fora de escopo:** implantação das telas de conversação (Q1/Q2/Q3, empatia, marcadinho,
 follow-ups, confirmação D-1, offline, nutrição). Outro projeto.
 
@@ -65,7 +66,25 @@ sem o validador reclamar.
 
 ---
 
-## 2. Objetivo
+## 2. Princípio
+
+> *"Todas as regras do prompt têm que ser soberanas. As palavras vamos modificar."*
+> — dono, 05/08
+
+> *"Só não o esqueleto, que serve para todos."*
+
+**Regra é soberana e universal. Palavra é da empresa.** Tudo neste documento é
+consequência disso:
+
+- A **estrutura** — regras, categorias, tabelas de decisão, ordem, proibições, e a
+  lógica de gatilho no código — é uma só, vale para todas, e ninguém edita por empresa.
+- A **palavra** — toda frase que o lead pode ler — é da empresa, sem exceção. Não existe
+  frase compartilhada entre clientes, nem como default, nem como fallback.
+
+O objetivo do arquivo de implantação é ter **a cara do cliente**: cada empresa que entra
+no ar fala com a voz dela em 100% dos momentos, e recebe as regras de todo mundo.
+
+## 2.1. Objetivo técnico
 
 Uma correção na lógica de agendamento entra em **um** lugar e vale para **todas** as
 empresas na mesma hora, existentes e novas — sem job de sincronização e sem UPDATE em
@@ -187,7 +206,94 @@ empresas. O desvio de uma vira capacidade do sistema, em vez de dívida escondid
 O gate do diff (§4) é quem detecta isso: todo texto que cai no balde **perda** é uma
 lacuna faltando, e bloqueia a migração até ela existir.
 
-### 3.6. `validar()` passa a cobrir três coisas
+### 3.6. As frases embutidas no `agente.py` também viram lacunas
+
+**Pedido do dono (05/08):** *"quando o LLM não entende, salta essa frase embutida no
+código. Não quero isso mais — quero por empresa."*
+
+O esqueleto não é a única fonte de voz da Rejane, e o problema não está só no
+`agente.py`. Varredura do backend inteiro (`app/**/*.py`, literais em português
+voltados ao lead, descartando log, SQL e instrução ao LLM):
+
+| | Total |
+|---|---|
+| Candidatos a voz no backend | **258**, em 38 arquivos |
+| …só em `app/routers/agente.py` | **153** |
+| …em `app/routers/confirmacao_agendamento.py` | 15 |
+| …em `app/routers/leads.py` | 13 |
+| …em `app/services/wizard/esqueleto.py` | 10 |
+| …em `app/services/qualificacao_lock.py` | 8 |
+| Literais **com emoji** no `agente.py` | 46 |
+
+O número exato de chaves finais sai da triagem (parte é log residual, parte é uma
+mesma frase repetida em ramos diferentes). Mas a ordem de grandeza é essa: **centenas
+de frases**, não dezenas. Todas hoje compartilhadas entre todos os clientes.
+
+Os dois que o dono apontou são os fallbacks de falha do LLM:
+
+| Local | Gatilho | Texto |
+|---|---|---|
+| `agente.py:3919` | SAFETY-NET: handler ficou silencioso | "Anotei aqui! Só um momento que vou conferir pra te responder direitinho 💛" |
+| `agente.py:9249-9257` | LLM retornou vazio (loop de tool_calls ou falha silenciosa) | "Deixa eu verificar aqui e já te retorno, {nome}! 💛" |
+
+Outros que vão para o lead:
+
+| Local | Texto |
+|---|---|
+| `agente.py:3164` | "Que bom falar com você 😊" |
+| `agente.py:5207` | "Oi! 🙈 Não consegui ouvir bem seu áudio… 💛" |
+| `agente.py:6062` | "Tudo bem, fico à disposição… é só me chamar 💛" |
+| `agente.py:6168` | "Tudo certo! Agradeço o retorno 💛" |
+| `agente.py:9580` | "horário certinho 😊 Só um instante!" |
+| `agente.py:10024`, `10276`, `10606` | "Conferi aqui na agenda 😊" / "consegui aqui pra você 😊" |
+| `agente.py:10027`, `10436`, `10682` | "Qual funciona melhor pra você? 😊" |
+| `agente.py:8577`, `8765`, `8817`, `8820` | âncoras pós-LLM, anexadas à resposta |
+
+E o caso mais direto de contradição — o código **instruindo** o modelo:
+
+| Local | Texto |
+|---|---|
+| `agente.py:8262`, `8402`, `8460` | "Use emojis com moderação: 💛 😊" |
+
+A Liliane está configurada como *sem emojis, corporativo*. O sistema manda o modelo
+dela usar coração, em três lugares.
+
+**Desenho:** mesmo princípio do §3.1, aplicado ao código. O `agente.py` mantém a
+**lógica do gatilho** (quando o safety-net dispara, quando o LLM voltou vazio) e perde
+o **texto**. O texto vem de `config_ia`, por chave nomeada, resolvido por uma função
+única:
+
+```python
+voz(config_ia, "falha_llm_vazio", nome=_nome_curto)
+```
+
+Isso é o que satisfaz *"se for no código tem que funcionar pra ambos também"*: a
+correção do gatilho continua sendo uma só e propaga por deploy; a frase passa a ser da
+empresa.
+
+Exemplo do próprio dono para a chave `falha_llm_vazio`: *"vou chamar um atendente pra
+te auxiliar"* — que para um público de terapeutas ou um cliente corporativo é resposta
+melhor do que *"Anotei aqui! … 💛"*.
+
+#### Fallback quando a chave não existe — decisão pendente
+
+O §3.7 proíbe fallback silencioso, e a razão é o incidente do `marcadinho_template`
+(05/08): o default hardcoded era persona de outra empresa. Mas suprimir a mensagem do
+SAFETY-NET seria pior que mandá-la — o safety-net existe justamente para o lead não
+ficar sem resposta.
+
+Regra proposta: **fallback nunca carrega persona**. Se a chave faltar, o sistema envia
+um texto neutro — sem emoji, sem nome de agente, sem tom — e loga em nível de erro.
+Ex.: *"Só um momento, já te respondo."* Não é a voz de ninguém, e por isso não vaza
+identidade de empresa nenhuma.
+
+A `validar()` continua exigindo todas as chaves preenchidas na implantação, então o
+neutro é rede de segurança, não caminho normal.
+
+**A decidir:** o dono aprova o texto neutro como último recurso, ou prefere que a
+ausência de chave bloqueie a empresa de entrar no ar?
+
+### 3.7. `validar()` passa a cobrir três coisas
 
 1. Estrutura byte a byte (já faz) — **e agora incluindo o texto hoje preso em
    `_identidade()`**, que precisa migrar para `BLOCOS_FIXOS` ou ganhar cobertura
@@ -267,3 +373,9 @@ Rejane estava sobrescrevendo a delas — bug que já está no ar hoje, apenas in
 - [ ] Pin de versão segura uma empresa sem afetar as outras
 - [ ] Tela do Agente IA sem textarea de prompt: lacunas editáveis + preview read-only
 - [ ] Não existe caminho no sistema que grave texto livre por cima de um bloco fixo
+- [ ] Nenhum literal com emoji em `agente.py` sai para o lead: os 46 triados, os de voz
+      movidos para `config_ia`, os de instrução ao LLM lendo a política da empresa
+- [ ] `agente.py:8262/8402/8460` param de mandar o modelo usar 💛😊 — a instrução passa a
+      refletir a lista `emojis` da empresa (Liliane sem nenhum)
+- [ ] SAFETY-NET e fallback de LLM vazio falam na voz da empresa
+- [ ] Nenhum fallback de última instância carrega persona (sem emoji, sem nome de agente)
