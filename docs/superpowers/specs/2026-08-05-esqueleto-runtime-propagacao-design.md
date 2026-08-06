@@ -162,7 +162,32 @@ travar as outras e sem deploy para reverter. Sem isso, um bug no esqueleto ating
 as empresas instantaneamente — mesmo raio de dano do incidente de 31/07 (UPDATE sem
 WHERE), só que por design.
 
-### 3.5. `validar()` passa a cobrir três coisas
+### 3.5. A tela do Agente IA vira read-only
+
+**Decisão do dono (05/08):** o textarea do prompt do sistema deixa de existir.
+*"Não pode mexer, senão perde nossas melhorias fixas ao longo do tempo."*
+
+A tela passa a ter:
+
+- **Campos editáveis** — só as lacunas: identidade/nicho, tom, emojis, perguntas,
+  objeções, e as ~10 frases de voz.
+- **Preview read-only** — o prompt montado, exibido para conferência, sem edição.
+
+**Não existe escape hatch.** Nada de `esqueleto_versao: "manual"`, nada de textarea
+liberado sob aviso. A razão é a que motivou o projeto inteiro: qualquer caminho que
+permita escrever texto livre por cima de um bloco reintroduz a divergência silenciosa
+— só que agora com a aparência de estar sob controle.
+
+**Consequência, e é a parte que importa:** quando uma empresa precisar de algo que o
+esqueleto não expressa, a saída **não** é liberar a edição dela. É **criar uma lacuna
+nova no esqueleto**. Isso é código, é revisado, e passa a existir para todas as
+empresas. O desvio de uma vira capacidade do sistema, em vez de dívida escondida no
+`config_ia` de uma linha do banco.
+
+O gate do diff (§4) é quem detecta isso: todo texto que cai no balde **perda** é uma
+lacuna faltando, e bloqueia a migração até ela existir.
+
+### 3.6. `validar()` passa a cobrir três coisas
 
 1. Estrutura byte a byte (já faz) — **e agora incluindo o texto hoje preso em
    `_identidade()`**, que precisa migrar para `BLOCOS_FIXOS` ou ganhar cobertura
@@ -216,18 +241,17 @@ Rejane estava sobrescrevendo a delas — bug que já está no ar hoje, apenas in
 | Montador perde texto de nicho na migração | Gate do diff; balde "perda" bloqueia a migração |
 | Lacuna de voz não preenchida numa empresa nova | `validar()` recusa a montagem; sem fallback silencioso |
 | Custo de montar o prompt a cada requisição | Concatenação de strings; desprezível frente à chamada do LLM |
-| Empresa precisa sair do trilho | Decidir se existe escape hatch — **questão em aberto**, ver §6 |
+| Empresa precisa de algo que o esqueleto não expressa | Vira lacuna nova no esqueleto (código, revisado, vale pra todas) — nunca texto livre no banco. Ver §3.5 |
+| Alguém edita o prompt à mão e desfaz a propagação | Impossível por construção: não há textarea. Ver §3.5 |
 
 ---
 
 ## 6. Questões em aberto
 
-1. **A tela "Prompt do sistema" no Agente IA.** Vira lacunas + preview read-only,
-   ou mantém textarea editável com escape hatch (`esqueleto_versao: "manual"`, para de
-   receber propagação)? Recomendação: read-only, que é a leitura literal de *"as regras
-   fixas não podem mudar uma vírgula"*.
-2. **Onde as lacunas de voz são preenchidas na implantação** — SQL da Fase 1, ou tela.
+1. **Onde as lacunas de voz são preenchidas na implantação** — SQL da Fase 1, ou tela.
    Depende do projeto de implantação, que está fora deste escopo.
+
+*(A tela do Agente IA foi decidida em 05/08 — read-only, sem escape hatch. Ver §3.5.)*
 
 ---
 
@@ -241,3 +265,5 @@ Rejane estava sobrescrevendo a delas — bug que já está no ar hoje, apenas in
 - [ ] Alterar um bloco em `esqueleto.py` + deploy muda as 5 empresas, verificado em
       prompt montado
 - [ ] Pin de versão segura uma empresa sem afetar as outras
+- [ ] Tela do Agente IA sem textarea de prompt: lacunas editáveis + preview read-only
+- [ ] Não existe caminho no sistema que grave texto livre por cima de um bloco fixo
