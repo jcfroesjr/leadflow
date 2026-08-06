@@ -354,17 +354,42 @@ três origens distintas, e só duas propagam:
 | Código determinístico (FSM das Q, slot-pick, failsafe, guards) | sim, já hoje, por deploy |
 | **Config por empresa** (`campo_desafio`, `duracao_reuniao_minutos`, `score_minimo`, mapeamento do webhook, `grupo_ativo`) | **não, nunca** |
 
-A terceira é a que causa exatamente os sintomas citados:
+### O contra-exemplo que mostra o padrão certo
 
-- **Q2 sai aberta** porque `campo_desafio` não foi mapeado contra o payload real do
-  formulário — a regra está certa, falta o dado. (Playbook, item 3.)
-- **Duração errada no convite** porque `duracao_reuniao_minutos` não bate com a sessão
-  real da empresa. (Playbook, item 6 — caso Natália, 45min.)
-- **Lead nunca abordado** porque `score_minimo` não bate com o score real do formulário
-  daquele cliente. (Playbook, item 4.)
+`campo_desafio` **não** é um furo, e vale registrar porque é o modelo a seguir.
+`agente.py:5294-5333` resolve o desafio por uma cascata de quatro níveis:
 
-Empresa nova com esqueleto perfeito e código atualizado **ainda pula Q** se a config
-estiver incompleta. Logo, a garantia pedida exige uma terceira perna.
+1. Mapeamento do webhook (chave `desafio`/`interesse`) — onde o dono clica no JSON do
+   payload real. Fonte canônica.
+2. `config_ia.campo_desafio` (legacy)
+3. `config_agendamento.campo_desafio` (mais antigo)
+4. Auto-detecção por keyword nas `answers`
+
+Comentário do próprio código: *"NÃO tem como quebrar empresa que já funciona — se a
+fonte nova não resolver, cai na próxima."*
+
+Ou seja: a lição foi **generalizada em código, com cascata e auto-detecção**, em vez de
+virar item de checklist que alguém pode esquecer no dia da implantação. É exatamente o
+que este projeto quer fazer com o resto.
+
+### Os que realmente não têm defesa
+
+- **Duração errada no convite** — `duracao_reuniao_minutos` sem cascata nem default
+  derivado. Caso Natália: sessão de 45min, código assume 60/30. (Playbook, item 6.)
+- **Lead nunca abordado** — `score_minimo` não bate com o score real do formulário
+  daquele cliente. Caso Natália: leads com score 0 e `score_minimo=100`. (Item 4.)
+- **Confirmação promete grupo que não existe** — `grupo_ativo=false` e a voz de
+  confirmação prometendo grupo. (Item 5.)
+- **Voz de outra empresa** — `marcadinho_template` vazio caindo no default da Rejane.
+  Corrigido em 05/08; é o caso que originou este spec.
+
+Empresa nova com esqueleto perfeito e código atualizado **ainda erra** nesses. Logo, a
+garantia pedida exige uma terceira perna.
+
+**E o critério para cada item da bateria é este:** antes de virar teste, perguntar se dá
+para resolver como o `campo_desafio` foi resolvido — cascata, default derivado de outro
+dado, auto-detecção. Teste é a rede; generalizar em código é a correção. O portão
+existe para o que sobra depois de tentar generalizar, não como substituto.
 
 ### 4.2.1. A bateria
 
