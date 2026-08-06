@@ -1,0 +1,65 @@
+{
+  "_leia": "Layout em docs/implantacao/perfil-cliente.md. Uma empresa = um perfil. Toda frase que o lead pode ler sai daqui. Nada e herdado de outra empresa.",
+  "_esqueleto_versao": "latest",
+
+  "identidade": {
+    "nome_agente": "",
+    "nome_responsavel": "",
+    "empresa_nome": "",
+    "papel": "SDR humana e experiente",
+    "sessao_label": "conversa"
+  },
+
+  "voz": {
+    "tom": "",
+    "emojis": [],
+    "emoji_max_por_msg": 1,
+
+    "frases": {
+      "espelho_dia_cheio": "",
+      "espelho_corrida": "",
+      "exemplo_negrito": "",
+      "regra_emoji": "",
+      "cat2_validacao": "",
+      "cat3_a": "",
+      "cat3_b": "",
+      "cat3_c": "",
+      "cat4_aguardo": "",
+      "sem_opcoes_novas": "",
+      "horario_ocupado": "",
+      "encerrar_cordial": ""
+    },
+
+    "fallbacks": {
+      "safety_net": "",
+      "llm_vazio": "",
+      "audio_ilegivel": "",
+      "optout_despedida": "",
+      "verificando": ""
+    },
+
+    "momentos": {
+      "saudacao_retorno": "",
+      "slots_encontrados": "",
+      "escolha_slot": ""
+    }
+  },
+
+  "qualificacao": {
+    "perguntas": [],
+    "empatia": "",
+    "campo_desafio": "",
+    "score_minimo": null
+  },
+
+  "agendamento": {
+    "duracao_reuniao_minutos": null,
+    "plataforma": "",
+    "grupo_ativo": null,
+    "confirmacao": ""
+  },
+
+  "objecoes": [
+    { "objecao": "", "resposta": "" }
+  ]
+}

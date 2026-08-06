@@ -50,7 +50,6 @@ São 💛 três vezes, 😊 uma, ✅ uma, dentro do que deveria ser regra univer
 
 Impacto medido contra as implantações existentes:
 
-- **Liliane** — tom definido como *sem emojis, corporativo*. Recebe `Tranquilo! 💛`.
 - **Jeenifer (NPA)** — público de terapeutas, *"emoji elegante, sem monte de coração"*.
   Mesmo problema.
 - **Natália Titos** — reunião de **45min**. O bloco afirma *"a call é rapidinha, só
@@ -255,7 +254,7 @@ E o caso mais direto de contradição — o código **instruindo** o modelo:
 |---|---|
 | `agente.py:8262`, `8402`, `8460` | "Use emojis com moderação: 💛 😊" |
 
-A Liliane está configurada como *sem emojis, corporativo*. O sistema manda o modelo
+A Jeenifer atende terapeutas e pede tom sério. O sistema manda o modelo
 dela usar coração, em três lugares.
 
 **Desenho:** mesmo princípio do §3.1, aplicado ao código. O `agente.py` mantém a
@@ -334,7 +333,11 @@ montador, encontrado antes de tocar em qualquer empresa.
 Os três blocos que faltam nela entram **depois**, ligados um a um, com conversa real
 sendo acompanhada — não como efeito colateral da migração.
 
-Depois da Rejane: Liliane, Jeenifer, Natália. Nessas o diff vai expor onde a voz da
+**Em produção hoje são três empresas: Rejane, Natália e Jeenifer** (confirmado pelo
+dono, 06/08 — as demais do playbook não estão mais no ar). O universo da migração é
+esse, e nada fora dele precisa ser tocado.
+
+Depois da Rejane: Natália e Jeenifer. Nessas o diff vai expor onde a voz da
 Rejane estava sobrescrevendo a delas — bug que já está no ar hoje, apenas invisível.
 
 ---
@@ -457,7 +460,7 @@ leitura que alguém pode pular.
 - [ ] Diff da Rejane = zero, com montagem em runtime ligada
 - [ ] `validar()` recusa montagem com lacuna de voz vazia
 - [ ] `validar()` cobre o texto hoje preso em `_identidade()`
-- [ ] Liliane e Jeenifer sem 💛 em nenhuma frase modelo
+- [ ] Jeenifer sem 💛 em nenhuma frase modelo
 - [ ] Natália com a duração real (45min) vinda de `config_agendamento`
 - [ ] Alterar um bloco em `esqueleto.py` + deploy muda as 5 empresas, verificado em
       prompt montado
@@ -467,7 +470,7 @@ leitura que alguém pode pular.
 - [ ] Nenhum literal com emoji em `agente.py` sai para o lead: os 46 triados, os de voz
       movidos para `config_ia`, os de instrução ao LLM lendo a política da empresa
 - [ ] `agente.py:8262/8402/8460` param de mandar o modelo usar 💛😊 — a instrução passa a
-      refletir a lista `emojis` da empresa (Liliane sem nenhum)
+      refletir a lista `emojis` da empresa (Jeenifer com paleta sóbria)
 - [ ] SAFETY-NET e fallback de LLM vazio falam na voz da empresa
 - [ ] Nenhum fallback de última instância carrega persona (sem emoji, sem nome de agente)
 
