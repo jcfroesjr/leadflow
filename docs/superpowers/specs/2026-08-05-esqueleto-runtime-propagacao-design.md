@@ -339,6 +339,72 @@ Rejane estava sobrescrevendo a delas — bug que já está no ar hoje, apenas in
 
 ---
 
+## 4.2. Portão de entrada no ar — regressão contra incidentes conhecidos
+
+**Exigência do dono (05/08):** *"não posso aceitar implantar uma empresa nova e o
+sistema pular as Q, mandar informação de agendamento errado — sendo que já foi
+corrigido em outra empresa."*
+
+**Propagar o esqueleto não entrega isso sozinho.** As duas falhas citadas nascem de
+três origens distintas, e só duas propagam:
+
+| Origem da falha | Propaga sozinho? |
+|---|---|
+| Regra do prompt (`esqueleto.py`) | sim, depois deste projeto |
+| Código determinístico (FSM das Q, slot-pick, failsafe, guards) | sim, já hoje, por deploy |
+| **Config por empresa** (`campo_desafio`, `duracao_reuniao_minutos`, `score_minimo`, mapeamento do webhook, `grupo_ativo`) | **não, nunca** |
+
+A terceira é a que causa exatamente os sintomas citados:
+
+- **Q2 sai aberta** porque `campo_desafio` não foi mapeado contra o payload real do
+  formulário — a regra está certa, falta o dado. (Playbook, item 3.)
+- **Duração errada no convite** porque `duracao_reuniao_minutos` não bate com a sessão
+  real da empresa. (Playbook, item 6 — caso Natália, 45min.)
+- **Lead nunca abordado** porque `score_minimo` não bate com o score real do formulário
+  daquele cliente. (Playbook, item 4.)
+
+Empresa nova com esqueleto perfeito e código atualizado **ainda pula Q** se a config
+estiver incompleta. Logo, a garantia pedida exige uma terceira perna.
+
+### 4.2.1. A bateria
+
+O índice de memória documenta ~90 sessões de fix já shippados. Cada uma é um modo de
+falha conhecido — e portanto um caso de teste. A implantação passa a ter um portão:
+**empresa nova não vai ao ar sem passar.**
+
+Cada caso é um par (entrada, comportamento proibido), rodado contra a empresa recém
+implantada com lead de teste:
+
+| Caso | Origem | Falha proibida |
+|---|---|---|
+| Lead responde só "Boa noite!" | 31/07 saudação | Confirmar Q2/Q3 e forçar slots |
+| Q1 vem do painel, não do LLM | 28/07 q1 determinística | Q1 improvisada |
+| Lead confirma Q2 | 29/07 cascata Q3 | Promover a qualificado antes da Q3 |
+| Lead diz "trabalho às 8:30" | 05/08 restrição de horário | Re-ofertar 08:00 |
+| Lead pede dia da semana | 01/08 rebusca | Frase pronta de "não tem" |
+| Lead faz pergunta antes de escolher | 02/08 pergunta não agenda | Chutar o primeiro slot e criar evento |
+| Lead pede valor após slots | 01/08 pergunta valor | Bypass dos forçadores |
+| Empresa com `ativa=false` | 01/08 empresa inativa | Lead órfão sem follow-up |
+| …demais incidentes do índice | | |
+
+A lista completa sai da triagem do índice de memória. O critério não é "todos os ~90",
+é **todos os que são reproduzíveis com lead de teste** — os demais viram checklist
+manual no playbook.
+
+### 4.2.2. Validação de config, não só de comportamento
+
+Parte dos casos é verificável sem conversar, e essa parte roda primeiro por ser barata:
+
+- `campo_desafio` resolve contra o `ultimo_payload` real do webhook — não deduzido
+- `duracao_reuniao_minutos` preenchido e conferido com o cliente
+- `score_minimo` conferido contra o score real dos leads do CSV
+- `grupo_ativo` coerente com o que a voz de confirmação promete
+- toda chave de voz (§3.6) preenchida
+- linha ativa em `membros` para o acesso da dona
+
+Isso é o "checklist de ouro" do playbook virando código executável em vez de item de
+leitura que alguém pode pular.
+
 ## 5. Riscos
 
 | Risco | Mitigação |
@@ -379,3 +445,12 @@ Rejane estava sobrescrevendo a delas — bug que já está no ar hoje, apenas in
       refletir a lista `emojis` da empresa (Liliane sem nenhum)
 - [ ] SAFETY-NET e fallback de LLM vazio falam na voz da empresa
 - [ ] Nenhum fallback de última instância carrega persona (sem emoji, sem nome de agente)
+
+**Portão de implantação (§4.2) — é isto que responde à exigência do dono:**
+
+- [ ] Empresa nova não vai ao ar sem passar na bateria de regressão
+- [ ] Bateria cobre os incidentes reproduzíveis com lead de teste, derivados do índice
+- [ ] Validação de config roda antes da de comportamento (barata primeiro)
+- [ ] Reprodução de "pular Q" e "agendamento errado" **falha o portão**, não passa
+      despercebida
+- [ ] Checklist de ouro do playbook virou verificação executável, não item de leitura
