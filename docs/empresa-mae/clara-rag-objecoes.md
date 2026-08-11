@@ -33,7 +33,7 @@ confira com `GET /admin/rag/testar` usando as perguntas de teste do fim do arqui
 ```
 /ia PERGUNTAS: quanto custa, qual o valor, qual o preço, quanto é, quanto fica por mês, mensalidade, valor do investimento, tem taxa, é caro, cabe no meu bolso.
 
-O preço depende de quantos leads o cliente recebe por mês. São tres planos: ate 350 leads por mes custa R$297 por mes; de 351 a 500 leads custa R$597 por mes; acima de 500 leads custa R$997 por mes. A maioria dos mentores fica no plano de R$297.
+O preço depende de quantos leads o cliente recebe por mês. Ate 350 leads por mes custa R$297 por mes. De 351 a 500 leads custa R$597 por mes. De 501 a 850 leads custa R$997 por mes. Acima de 850 leads por mes nao existe preco de tabela: o plano e montado sob medida, porque nesse volume a operacao e outra. A maioria dos mentores fica no plano de R$297.
 
 Em todos os planos ha R$997 de implantacao, cobrados uma unica vez no inicio. A implantação não é taxa de cadastro: é o trabalho de configurar o agente com o método e o jeito de falar do cliente, conectar o WhatsApp, conectar a agenda e testar com lead real antes de ligar. Quem faz é o time da LeadCase, não o cliente.
 
