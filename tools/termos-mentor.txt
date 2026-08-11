@@ -1,0 +1,13 @@
+# Termos de busca — ICP mentor (Ad Library BR)
+# Uso: python tools/adlib_prospect.py --termos tools/termos-mentor.txt --min-dias 60
+# Linhas iniciadas por # são ignoradas pelo script.
+mentoria para mulheres
+mentoria de vendas
+mentoria empresarial
+mentoria individual
+programa de mentoria
+consultoria de negócios
+mentoria para infoprodutores
+sessão estratégica gratuita
+diagnóstico gratuito negócio
+mentoria high ticket
