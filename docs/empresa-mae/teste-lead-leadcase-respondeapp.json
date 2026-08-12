@@ -1,0 +1,20 @@
+{
+  "respondent": {
+    "score": 100,
+    "answers": {
+      "Qual o seu nome completo?": "Caca Teste",
+      "Qual o seu WhatsApp (com DDD)?": "+55 (21) 99508-5057",
+      "Qual o seu melhor e-mail?": "teste@leadcase.com.br",
+      "O que você vende hoje?": "Mentoria / consultoria",
+      "Qual o seu maior desafio hoje no atendimento dos seus leads?": "Perco lead à noite, fim de semana e feriado",
+      "Quantos leads novos você recebe por mês?": "De 351 a 500",
+      "Quanto custa o que você vende?": "R$2 mil a R$10 mil",
+      "Hoje quem responde os seus leads?": "Eu mesmo"
+    },
+    "respondent_utms": {
+      "utm_source": "instagram",
+      "utm_content": "criativo-teste-01",
+      "utm_term": "120210000000000000"
+    }
+  }
+}
