@@ -184,10 +184,30 @@ ainda somam as tentativas abortadas. O bloqueio tem de ser por URL do CDN.
 Efeito colateral bom: com o CDN bloqueado a página renderiza mais rápido e o mesmo
 número de scrolls rende **mais** cards (65 contra 59).
 
-**Regra dura**: o scraper **nunca** usa o proxy das instâncias do Evolution. Se um
-dia a Meta bloquear o IP do VPS e for preciso proxy, é conta separada — 3,2 GB/mês
-de scrape na banda metrada do Webshare já derrubou WhatsApp de cliente por estouro
-silencioso. Prospecção não pode custar conexão de cliente.
+### 5.2.2 Contingência de bloqueio — proxy residencial, só se bloquear
+
+Começa **sem proxy**, conexão direta do VPS. Proxy residencial entra só se a Meta
+bloquear o IP — não antes.
+
+**Regra dura**: o scraper **nunca** usa o proxy das instâncias do Evolution. Duas
+razões independentes, e cada uma sozinha já basta:
+
+1. **Banda.** 3,2 GB/mês de scrape na banda metrada do Webshare já derrubou WhatsApp
+   de cliente por estouro silencioso. Prospecção não pode custar conexão de cliente.
+2. **Requisito oposto.** O Evolution precisa de IP **fixo/sticky** — trocar IP no
+   meio derruba a sessão. O scraper quer o contrário: **rotativo**, um IP diferente
+   por rodada é justamente o que evita bloqueio. Mesmo com banda sobrando, o proxy
+   certo pra um é o errado pro outro.
+
+**Como ligar sem tocar em código**: `SCRAPER_PROXY_URL`, vazia por padrão. O runner
+só passa `proxy=` pro Playwright quando ela existe. Bloqueou → seta a env var no
+serviço `leadflow-scraper` e reinicia. Nenhum deploy, nenhum código.
+
+**Como saber que bloqueou**: o runner já detecta (`"login" in pg.url` ou título
+começando com "entrar"). Nesse caso grava `ultimo_erro = 'meta_pediu_login'` e a
+tela mostra o aviso na campanha, em vez de exibir "0 prospects" como se o termo
+não tivesse anunciantes. Bloqueio silencioso que parece resultado vazio é o pior
+modo de falha possível aqui.
 
 ### 5.3 `leadflow-scraper` — o 4º serviço
 
