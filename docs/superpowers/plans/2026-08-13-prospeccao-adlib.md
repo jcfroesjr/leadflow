@@ -12,6 +12,47 @@
 
 ---
 
+## Estado — 13/08/2026
+
+| Task | Situação | Commit |
+|---|---|---|
+| 1 Migration | ✅ aplicada no Supabase (10 e 18 colunas) | `d0efffe` |
+| 2 Parser + golden | ✅ 16 testes | `f88a08b` |
+| 3 Segundo hop | ✅ 10 testes, validado em LP real | `850fc7b` |
+| 4 Upsert | ✅ 19 testes | `50b0254` |
+| 5 Runner | ✅ 7 testes; browser ao vivo (57 cards/35s) | `b9876a3` |
+| 6 Serviço scraper | ✅ 17 testes; **imagem não construída** | `3e848c1` |
+| 7 Router | ✅ 19 testes | `88c2857` |
+| 8 Tela | ✅ tsc + vite limpos | `480f4bb` |
+| 9 Deploy | ⏳ **pendente — exige o Easypanel** | — |
+
+**88 testes** no backend, todos verdes. Frontend compila.
+
+### O que NÃO foi verificado
+
+1. **`Dockerfile.scraper` nunca foi construído** — não há Docker nesta máquina. O
+   ponto mais provável de falha é `playwright install --with-deps chromium` na
+   base slim. O primeiro build no Easypanel é o teste real.
+2. **RAM livre do VPS às 4h** — Chromium quer 300–500 MB de pico. Se o VPS
+   estiver justo, pode causar OOM em quem já roda lá.
+3. **Gravação real no Supabase pelo runner** — rodado só com Supabase falso; não
+   há `.env` local.
+
+### Achados que mudaram o código durante a execução
+
+- **`PYTHONUNBUFFERED=1`**: sem isso os `print()` ficam em buffer de bloco e
+  `docker logs` não mostra nada por dias. Descoberto rodando o entrypoint local;
+  teste nenhum pegaria, porque testes chamam a função direto.
+- **`visto_em` sempre grava**: um guard "não atualize se nada mudou" faria o
+  sinal de "sumiu há N dias" apontar para quem está no ar.
+- **Ícone `Instagram` não existe** no lucide-react instalado → `AtSign`.
+- **Venv local estava incompleto**: 20 de 30 dependências ausentes, mais 3
+  pacotes corrompidos (pip vendored idna, idna, anyio). Corrigido com
+  `pip install -r requirements.txt`. As 27 falhas da suite são anteriores e
+  idênticas antes/depois — não são de ambiente.
+
+---
+
 ## Contexto que o executor precisa saber
 
 **Dois repositórios.** `leadflow-backend` e `leadflow-frontend` são **submódulos git**. Commit dentro do submódulo primeiro, depois commit do ponteiro no repo raiz. `tools/` vive só na raiz e **não é visível** para o backend — por isso o parser é portado, não importado.
