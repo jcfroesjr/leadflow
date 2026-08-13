@@ -166,6 +166,29 @@ Sequência por campanha:
 4. Upsert conforme a regra da seção 4.
 5. Grava `ultima_rodada`; em falha, grava `ultimo_erro` e sai com código ≠ 0.
 
+### 5.2.1 Custo de banda — bloquear o CDN, não o tipo
+
+O dado é gratuito (sem API key, sem token de LLM), mas o browser baixa criativo
+que o parser não usa. Medido em "mentoria para mulheres", 6 scrolls:
+
+| cenário | por termo | 10 termos/dia |
+|---|---|---|
+| sem bloqueio | 23,5 MB | 6,9 GB/mês |
+| bloqueando `image`/`media`/`font` por **tipo** | 77,1 MB (!) | 22,6 GB/mês |
+| bloqueando `scontent*.fbcdn.net` por **URL** | **10,8 MB** | **3,2 GB/mês** |
+
+Bloquear por `resource_type` **piora 3×**: o Facebook re-busca as imagens via
+`fetch` quando o carregamento normal falha, o filtro por tipo não pega o retry, e
+ainda somam as tentativas abortadas. O bloqueio tem de ser por URL do CDN.
+
+Efeito colateral bom: com o CDN bloqueado a página renderiza mais rápido e o mesmo
+número de scrolls rende **mais** cards (65 contra 59).
+
+**Regra dura**: o scraper **nunca** usa o proxy das instâncias do Evolution. Se um
+dia a Meta bloquear o IP do VPS e for preciso proxy, é conta separada — 3,2 GB/mês
+de scrape na banda metrada do Webshare já derrubou WhatsApp de cliente por estouro
+silencioso. Prospecção não pode custar conexão de cliente.
+
 ### 5.3 `leadflow-scraper` — o 4º serviço
 
 Mesmo repositório `leadflow-backend`, `Dockerfile.scraper` (slim + Chromium),
