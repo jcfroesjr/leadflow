@@ -38,6 +38,13 @@ LIMITES — leia antes de usar
 """
 from __future__ import annotations
 
+import sys as _sys
+try:  # console do Windows e cp1252: sem isso um simples print derruba a rodada
+    _sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    _sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 import argparse
 import csv
 import re
@@ -46,7 +53,7 @@ import unicodedata
 from dataclasses import dataclass, asdict
 from datetime import date, datetime
 from pathlib import Path
-from urllib.parse import quote_plus
+from urllib.parse import parse_qs, quote_plus, unquote, urlsplit
 
 BASE = (
     "https://www.facebook.com/ads/library/"
@@ -65,9 +72,23 @@ RE_INICIO = re.compile(
 )
 RE_USOS = re.compile(r"(\d+)\s+an[úu]ncios?\s+us", re.I)
 
+# A Meta enche o card de caracteres invisíveis (zero-width, BOM, nbsp). Eles fazem
+# uma linha "vazia" passar por todo filtro de texto e virar o nome do anunciante.
+RE_INVISIVEL = re.compile(r"[​-‏  ⁠﻿\xa0]")
+# o '_u/' opcional é o deeplink de app do Instagram (instagram.com/_u/fulano):
+# sem ele o handle capturado seria literalmente "_u" pra todo mundo.
+RE_IG = re.compile(r"instagram\.com/(?:_u/)?([A-Za-z0-9._]+)", re.I)
+
+# caminhos do Instagram que não são perfil
+IG_RESERVADO = {"p", "reel", "reels", "explore", "stories", "tv", "accounts", "direct", "_u"}
+
 
 def _norm(s: str) -> str:
     return unicodedata.normalize("NFKD", s or "").encode("ascii", "ignore").decode().lower()
+
+
+def _limpa(s: str) -> str:
+    return RE_INVISIVEL.sub("", s or "").strip()
 
 
 def _parse_data(txt: str) -> date | None:
@@ -82,6 +103,58 @@ def _parse_data(txt: str) -> date | None:
         return date(int(ano), mes, int(dia))
     except ValueError:
         return None
+
+
+def _destino(url: str) -> str:
+    """Desembrulha o redirecionador da Meta: l.facebook.com/l.php?u=<destino>.
+
+    Sem isto o link do anúncio é sempre 'l.php' — o destino real mora na query,
+    e é exatamente o pedaço que um .split('?')[0] joga fora.
+    """
+    if "/l.php" not in url:
+        return url
+    alvo = parse_qs(urlsplit(url).query).get("u", [""])[0]
+    return unquote(alvo) if alvo else url
+
+
+def _instagram(links: list[str]) -> str:
+    """Perfil do Instagram, normalizado. Ignora link de post/reel — quero a conta."""
+    for link in links:
+        m = RE_IG.search(_destino(link))
+        if not m:
+            continue
+        handle = m.group(1).strip(".")
+        if not handle or handle.lower() in IG_RESERVADO:
+            continue
+        return f"https://www.instagram.com/{handle}"
+    return ""
+
+
+def _anunciante(texto: str) -> str:
+    """Nome do anunciante.
+
+    A âncora é 'Patrocinado': o nome é sempre a linha logo acima. É mais estável
+    que varrer o card de cima pra baixo, porque o topo é só metadado e invisível.
+    """
+    linhas = [c for c in (_limpa(l) for l in texto.splitlines()) if c]
+
+    for i, linha in enumerate(linhas):
+        if _norm(linha) == "patrocinado" and i:
+            return linhas[i - 1]
+
+    # fallback: a primeira linha depois do bloco de metadados que pareça nome
+    for linha in linhas:
+        if len(linha) > 60 or linha.endswith(":"):  # 'X:' é rótulo, não nome
+            continue
+        n = _norm(linha)
+        if any(p in n for p in (
+            "identificacao", "veiculacao", "plataforma", "ativo", "patrocinado",
+            "categoria", "ver detalhes", "ver resumo", "abrir", "este anuncio",
+            "anuncios usam", "menu suspenso",
+        )):
+            continue
+        return linha
+    return ""
 
 
 @dataclass
@@ -135,31 +208,21 @@ def _extrair(cards: list[dict], termo: str, hoje: date) -> list[Prospect]:
         texto = card.get("texto") or ""
         links = card.get("links") or []
 
-        ad_id = (RE_ID.search(texto) or [None, ""])[1] if RE_ID.search(texto) else ""
+        m_id = RE_ID.search(texto)
+        ad_id = m_id.group(1) if m_id else ""
         inicio = _parse_data(texto)
         if not inicio:
             continue
 
+        # página: só link DIRETO do Facebook. O que vem embrulhado em l.php é
+        # destino do anúncio (Instagram, site), não a página que anuncia.
         page_url = next(
             (l.split("?")[0] for l in links
-             if "facebook.com" in l and "/ads/" not in l and "l.php" not in l),
+             if "facebook.com" in l and "/ads/" not in l and "/l.php" not in l),
             "",
         )
-        instagram = next((l.split("?")[0] for l in links if "instagram.com" in l), "")
-
-        # nome do anunciante: linha logo após os metadados, a mais "nome-like"
-        nome = ""
-        for linha in (l.strip() for l in texto.splitlines()):
-            if not linha or len(linha) > 60:
-                continue
-            n = _norm(linha)
-            if any(p in n for p in (
-                "identificacao", "veiculacao", "plataforma", "ativo", "patrocinado",
-                "categoria", "ver detalhes", "ver resumo", "abrir", "este anuncio",
-            )):
-                continue
-            nome = linha
-            break
+        instagram = _instagram(links)
+        nome = _anunciante(texto)
 
         usos = RE_USOS.search(texto)
         out.append(Prospect(
@@ -193,7 +256,7 @@ def coletar(termo: str, paginas: int, headful: bool, debug: bool) -> list[Prospe
             ),
         )
         pg = ctx.new_page()
-        print(f"[adlib] {termo!r} → {url}", file=sys.stderr)
+        print(f"[adlib] {termo!r} -> {url}", file=sys.stderr)
         pg.goto(url, wait_until="domcontentloaded", timeout=60_000)
         pg.wait_for_timeout(4_000)
 
@@ -267,7 +330,7 @@ def main() -> int:
         for p in linhas:
             w.writerow(asdict(p))
 
-    print(f"[adlib] {len(linhas)} anunciantes com anúncio no ar há {a.min_dias}+ dias → {a.out}")
+    print(f"[adlib] {len(linhas)} anunciantes com anúncio no ar há {a.min_dias}+ dias -> {a.out}")
     print(f"[adlib] top 5 por tempo de veiculação:")
     for p in linhas[:5]:
         print(f"   {p.dias_no_ar:>4}d  {p.anunciante[:44]:<44} {p.instagram or p.page_url}")
