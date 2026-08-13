@@ -1122,34 +1122,16 @@ async def virar_lead(prospect_id: str,
     return {"lead_id": lead["id"], "ja_existia": False}
 ```
 
-- [ ] **Step 1b: VERIFICAR se `leads.telefone` aceita nulo**
+- [x] **Step 1b: `leads.telefone` aceita nulo — VERIFICADO em 13/08 ✅**
 
-**Não pule.** Só ~6% dos prospects têm telefone. Se a coluna for `NOT NULL`, o
-`virar-lead` quebra em 94% dos casos — e só apareceria no teste de ponta a ponta.
+Consultado no Supabase: `nome`, `telefone` e `pipeline_status` são todos
+`is_nullable = YES`. O `virar-lead` funciona para prospect que só tem Instagram
+(50% da amostra) sem precisar recusar ninguém. **Nenhuma mudança necessária.**
 
-```sql
-select column_name, is_nullable
-  from information_schema.columns
- where table_name = 'leads' and column_name in ('telefone','nome','pipeline_status');
-```
-
-- **`is_nullable = YES`** → segue como está no Step 1.
-- **`is_nullable = NO`** → aplicar esta decisão: o endpoint recusa promoção sem
-  telefone, e o frontend desabilita o botão.
-
-```python
-    if not p.get("whatsapp"):
-        raise HTTPException(
-            422,
-            "Prospect sem telefone não vira lead. Aborde pelo Instagram e, se ele "
-            "responder, cadastre o lead com o número que ele passar.",
-        )
-```
-
-**Nunca** preencher `telefone` com o @ do Instagram ou um placeholder pra
-contornar. Telefone inválido na tabela `leads` é o que o agente usa pra mandar
-mensagem — o placeholder viraria disparo pra número inexistente ou, pior, pra
-número de terceiro.
+Fica registrado o que **não** se deve fazer se um dia isso mudar: nunca preencher
+`telefone` com o @ do Instagram ou um placeholder. Telefone inválido em `leads` é
+o que o agente usa pra disparar — viraria mensagem pra número inexistente ou, pior,
+pra número de terceiro. A saída correta seria recusar a promoção, não inventar dado.
 
 - [ ] **Step 2: Registrar em `app/main.py`**
 
@@ -1319,7 +1301,7 @@ leadflow-scheduler→ NÃO precisa
 | Meta troca o HTML | Golden de 34 cards quebra no CI | Task 2 |
 | Parser divergir entre os dois repos | Cabeçalho em ambos apontando um pro outro | Task 2 |
 | Rodada apagar "contatado" | `montar_upsert` testado; update sempre por `id` | Task 4 |
-| `leads.telefone` ser `NOT NULL` (94% dos prospects não têm) | **Não verificado.** Step 1b decide antes de implementar | Task 7 |
+| ~~`leads.telefone` ser `NOT NULL`~~ | **RESOLVIDO 13/08** — é nullable; promoção funciona só com Instagram | Task 7 |
 | Lead promovido invisível no Kanban | `pipeline_status="novo"` (whitelist em `leads.py:2051`) | Task 7 |
 | `asdict()` perder a `chave` (é método hoje) | `chave` vira campo na dataclass | Task 2 |
 
