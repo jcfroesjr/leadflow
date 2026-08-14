@@ -65,16 +65,45 @@ inclusive.
 
 ```json
 {
-  "nome":      "respondent.answers.Qual o seu nome completo?",
-  "telefone":  "respondent.answers.Qual o seu WhatsApp (com DDD)?",
-  "email":     "respondent.answers.Qual o seu melhor e-mail?",
-  "interesse": "respondent.answers.Qual o seu maior desafio hoje no atendimento dos seus leads?",
-  "score":     "respondent.score",
-  "canal":     "respondent.respondent_utms.utm_source",
-  "criativo":  "respondent.respondent_utms.utm_content",
-  "ad_id":     "respondent.respondent_utms.utm_term"
+  "nome":          "respondent.answers.Qual o seu nome completo?",
+  "telefone":      "respondent.answers.Qual o seu WhatsApp (com DDD)?",
+  "email":         "respondent.answers.Qual o seu melhor e-mail?",
+  "interesse":     "respondent.answers.Qual o seu maior desafio hoje no atendimento dos seus leads?",
+  "volume":        "respondent.answers.Quantos leads novos você recebe por mês?",
+  "ticket":        "respondent.answers.Quanto custa o que você vende?",
+  "vende":         "respondent.answers.O que você vende hoje?",
+  "quem_responde": "respondent.answers.Hoje quem responde os seus leads?",
+  "score":         "respondent.score",
+  "canal":         "respondent.respondent_utms.utm_source",
+  "criativo":      "respondent.respondent_utms.utm_content",
+  "ad_id":         "respondent.respondent_utms.utm_term"
 }
 ```
+
+### As chaves EXTRAS viram variáveis (14/08)
+
+`volume`, `ticket`, `vende` e `quem_responde` não são chaves conhecidas do
+código — e é justamente esse o ponto. **Toda chave do mapeamento que não seja
+reservada** (`nome`, `telefone`, `email`, `score`, `canal`, `criativo`, `ad_id`,
+`empresa`, `interesse`/`desafio`) vira `{{lead.<chave>}}`, utilizável no
+`prompt_sistema` e nos templates de Q1/Q2/Q3. O nome da chave é seu: mapeou
+`"volume"`, escreve `{{lead.volume}}`.
+
+Antes disso só o desafio chegava na conversa; o resto morria em `dados_raw` e só
+aparecia no PDF. Consequência que se pagava toda conversa: a **Q3 re-perguntava o
+volume** que o campo 6 já tinha perguntado — o mesmo loop de confirmação que o
+prompt proíbe, atravessando a fronteira página→WhatsApp, onde nenhuma regra
+pegava.
+
+Duas travas, com teste em `tests/test_vars_formulario.py`:
+
+- chave reservada **nunca** é sobrescrita por mapeamento (`"nome": "INVASOR"` não
+  troca o nome do lead);
+- variável escrita no template **sem** a chave correspondente no mapeamento não
+  vaza `{{...}}` pro lead — some do texto e sai `[TEMPLATE-BELT]` no log. Foi
+  assim que 57 leads da Jeenifer leram `[desafio informado no formulário]`.
+
+O mapeamento é lido com cache de 60s: editou, testa na hora, sem redeploy.
 
 Notas que evitam retrabalho:
 
@@ -90,8 +119,9 @@ Notas que evitam retrabalho:
   campo do tipo telefone com país Brasil, ou máscara que inclua `+55`. **Confira isso
   antes de publicar o formulário** — errado aqui, nenhum lead recebe a Q1 e o sintoma
   parece "o agente não respondeu".
-- **Perguntas 4, 6, 7 e 8 não têm chave própria** no código — ficam em `dados_raw` e
-  aparecem no PDF que vai pro seu WhatsApp. É onde você lê o volume antes da call.
+- **Perguntas 4, 6, 7 e 8** continuam saindo no PDF que vai pro seu WhatsApp, e
+  agora também chegam na conversa como `{{lead.vende}}`, `{{lead.volume}}`,
+  `{{lead.ticket}}` e `{{lead.quem_responde}}` — desde que mapeadas acima.
 
 ---
 
